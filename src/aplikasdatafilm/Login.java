@@ -3,8 +3,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package aplikasdatafilm;
-
-import aplikasidatafilm.LoginService;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -21,6 +19,16 @@ public class Login extends javax.swing.JFrame {
      */
     public Login() {
         initComponents();
+        PlaceholderSupport.install(jTextField1, "Masukkan email");
+        PlaceholderSupport.install(jPasswordField1, "Masukkan password");
+        jLabel5.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        jLabel5.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent event) {
+                dispose();
+                new Register().setVisible(true);
+            }
+        });
     }
 
     /**
@@ -65,8 +73,6 @@ public class Login extends javax.swing.JFrame {
                 JBuuttonActionPerformed(evt);
             }
         });
-        JBuutton.addActionListener(event -> login());
-
         jLabel5.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         jLabel5.setText("Belum punya akun? Register");
 
@@ -142,8 +148,8 @@ public class Login extends javax.swing.JFrame {
     }
 
     private void login() {
-        String identity = jTextField1.getText().trim();
-        char[] password = jPasswordField1.getPassword();
+        String identity = PlaceholderSupport.getText(jTextField1).trim();
+        char[] password = PlaceholderSupport.getPassword(jPasswordField1);
 
         if (identity.isEmpty() || password.length == 0) {
             JOptionPane.showMessageDialog(this, "Username/email dan password wajib diisi.");
@@ -152,15 +158,15 @@ public class Login extends javax.swing.JFrame {
         }
 
         try {
-            LoginService.Role role = LoginService.authenticate(identity, password);
-            if (role == LoginService.Role.INVALID) {
+            LoginService.AuthenticatedUser user = LoginService.authenticateUser(identity, password);
+            if (user.role() == LoginService.Role.INVALID) {
                 JOptionPane.showMessageDialog(this, "Username/email atau password salah.");
             } else {
                 dispose();
-                if (role == LoginService.Role.ADMIN) {
-                    new aplikasidatafilm.Menu().setVisible(true);
+                if (user.role() == LoginService.Role.ADMIN) {
+                    new aplikasdatafilm.Menu().setVisible(true);
                 } else {
-                    new PilihFilm().setVisible(true);
+                    new PilihFilm(user.idPengguna()).setVisible(true);
                 }
             }
         } catch (NoSuchAlgorithmException ex) {
@@ -169,7 +175,7 @@ public class Login extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Gagal memeriksa login: " + ex.getMessage());
         } finally {
             Arrays.fill(password, '\0');
-            jPasswordField1.setText("");
+            PlaceholderSupport.reset(jPasswordField1);
         }
     }
 

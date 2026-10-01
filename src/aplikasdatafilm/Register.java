@@ -15,6 +15,102 @@ public class Register extends javax.swing.JFrame {
      */
     public Register() {
         initComponents();
+        PlaceholderSupport.install(jTextField1, "Masukkan email");
+        PlaceholderSupport.install(jTextField2, "Masukkan nama");
+        PlaceholderSupport.install(jPasswordField1, "Masukkan password");
+        PlaceholderSupport.install(jPasswordField2, "Ulangi password");
+        JBuutton.setText("REGISTER");
+        JBuutton.addActionListener(e -> registerUser());
+        jLabel5.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        jLabel5.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                dispose();
+                new Login().setVisible(true);
+            }
+        });
+    }
+
+    private void registerUser() {
+        String nama = PlaceholderSupport.getText(jTextField2).trim();
+        String email = PlaceholderSupport.getText(jTextField1).trim();
+        char[] password = PlaceholderSupport.getPassword(jPasswordField1);
+        char[] confirm = PlaceholderSupport.getPassword(jPasswordField2);
+        try {
+            if (nama.isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Nama harus diisi");
+                return;
+            }
+            if (nama.length() > 100) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Nama maksimal 100 karakter.");
+                return;
+            }
+            if (email.isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Email harus diisi");
+                return;
+            }
+            if (email.length() > 254 || !email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Format email tidak valid.");
+                return;
+            }
+            if (password.length == 0) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Password harus diisi");
+                return;
+            }
+            if (!java.util.Arrays.equals(password, confirm)) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Konfirmasi password tidak cocok");
+                return;
+            }
+
+            try (java.sql.Connection conn = Koneksi.Koneksi.getConnection()) {
+                try (java.sql.PreparedStatement checkStmt = conn.prepareStatement("SELECT email FROM pengguna WHERE email = ?")) {
+                checkStmt.setString(1, email);
+                try (java.sql.ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next()) {
+                        javax.swing.JOptionPane.showMessageDialog(this, "Email sudah terdaftar!");
+                        return;
+                    }
+                }
+            }
+                String hash = hashPassword(password);
+                try (java.sql.PreparedStatement insertStmt = conn.prepareStatement(
+                        "INSERT INTO pengguna (nama, email, password_hash, role) VALUES (?, ?, ?, 'USER')")) {
+                    insertStmt.setString(1, nama);
+                    insertStmt.setString(2, email);
+                    insertStmt.setString(3, hash);
+                    insertStmt.executeUpdate();
+                    javax.swing.JOptionPane.showMessageDialog(this, "Registrasi berhasil! Silakan login.");
+                    dispose();
+                    new Login().setVisible(true);
+                }
+            }
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Algoritma hash password tidak tersedia.");
+        } catch (java.sql.SQLException exception) {
+            java.util.logging.Logger.getLogger(Register.class.getName()).log(
+                    java.util.logging.Level.SEVERE, "Registrasi gagal", exception);
+            String pesan = "23000".equals(exception.getSQLState())
+                    ? "Email sudah terdaftar!" : "Registrasi gagal. Periksa koneksi dan data yang dimasukkan.";
+            javax.swing.JOptionPane.showMessageDialog(this, pesan, "Kesalahan registrasi",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+        } finally {
+            java.util.Arrays.fill(password, '\0');
+            java.util.Arrays.fill(confirm, '\0');
+            PlaceholderSupport.reset(jPasswordField1);
+            PlaceholderSupport.reset(jPasswordField2);
+        }
+    }
+
+    private String hashPassword(char[] password) throws java.security.NoSuchAlgorithmException {
+        java.nio.ByteBuffer encoded = java.nio.charset.StandardCharsets.UTF_8.encode(java.nio.CharBuffer.wrap(password));
+        byte[] bytes = new byte[encoded.remaining()];
+        encoded.get(bytes);
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
+            return java.util.HexFormat.of().formatHex(hash);
+        } finally {
+            java.util.Arrays.fill(bytes, (byte) 0);
+        }
     }
 
     /**
@@ -67,6 +163,11 @@ public class Register extends javax.swing.JFrame {
         jLabel5.setText("Sudah punya akun? Login");
 
         jTextField2.setText("Masukkan nama ");
+        jTextField2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField2ActionPerformed(evt);
+            }
+        });
 
         jLabel6.setText("Nama :");
 
@@ -152,6 +253,10 @@ public class Register extends javax.swing.JFrame {
     private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jTextField1ActionPerformed
+
+    private void jTextField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField2ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextField2ActionPerformed
 
     /**
      * @param args the command line arguments

@@ -3,6 +3,14 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package aplikasdatafilm;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import javax.swing.ButtonGroup;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -10,11 +18,89 @@ package aplikasdatafilm;
  */
 public class CheckOut extends javax.swing.JFrame {
 
+    private long idPengguna;
+    private PemesananService.Jadwal jadwal;
+    private List<PemesananService.Kursi> kursi;
+    private BigDecimal subtotal = BigDecimal.ZERO;
+    private BigDecimal biayaLayanan = BigDecimal.ZERO;
+    private final java.text.NumberFormat formatRupiah = java.text.NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
+    private final DateTimeFormatter formatTanggal = DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
+    private final DateTimeFormatter formatJam = DateTimeFormatter.ofPattern("HH:mm");
+
     /**
      * Creates new form Login
      */
     public CheckOut() {
+        this(0, null, List.of());
+    }
+
+    public CheckOut(long idPengguna, PemesananService.Jadwal jadwal,
+            List<PemesananService.Kursi> kursi) {
+        this.idPengguna = idPengguna;
+        this.jadwal = jadwal;
+        this.kursi = List.copyOf(kursi);
         initComponents();
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        ButtonGroup metodePembayaran = new ButtonGroup();
+        metodePembayaran.add(jRadioButton1);
+        metodePembayaran.add(jRadioButton2);
+        metodePembayaran.add(jRadioButton3);
+        tampilkanRingkasan();
+        jButton1.addActionListener(event -> simpanPemesanan());
+    }
+
+    private void tampilkanRingkasan() {
+        if (jadwal == null || kursi.isEmpty()) {
+            return;
+        }
+        subtotal = jadwal.hargaTiket().multiply(BigDecimal.valueOf(kursi.size()));
+        biayaLayanan = subtotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        jLabel3.setText("Film: " + jadwal.judul());
+        jLabel4.setText("Tanggal: " + formatTanggal.format(jadwal.mulaiTayang()));
+        jLabel7.setText("Jam: " + formatJam.format(jadwal.mulaiTayang())
+                + " / " + jadwal.durasiMenit() + " menit");
+        jLabel10.setText("Kursi: " + String.join(", ", kursi.stream()
+                .map(PemesananService.Kursi::kodeKursi).sorted().toList()));
+        jLabel11.setText("Studio: " + jadwal.namaStudio());
+        jLabel19.setText(kursi.size() + " x " + formatRupiah.format(jadwal.hargaTiket()));
+        jLabel18.setText(formatRupiah.format(subtotal));
+        jLabel20.setText(formatRupiah.format(biayaLayanan));
+        jLabel21.setText(formatRupiah.format(subtotal.add(biayaLayanan)));
+    }
+
+    private void simpanPemesanan() {
+        if (idPengguna <= 0 || jadwal == null || kursi.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Data pemesanan tidak lengkap. Silakan pilih film dan kursi lagi.");
+            return;
+        }
+        String metode;
+        if (jRadioButton1.isSelected()) {
+            metode = "CASH";
+        } else if (jRadioButton2.isSelected()) {
+            metode = "QRIS";
+        } else if (jRadioButton3.isSelected()) {
+            metode = "TRANSFER_BANK";
+        } else {
+            JOptionPane.showMessageDialog(this, "Pilih metode pembayaran terlebih dahulu.");
+            return;
+        }
+
+        jButton1.setEnabled(false);
+        try {
+            long idPemesanan = PemesananService.buatPemesanan(idPengguna, jadwal.idJadwal(),
+                    kursi.stream().map(PemesananService.Kursi::idKursi).toList(), metode);
+            JOptionPane.showMessageDialog(this,
+                    "Pemesanan tersimpan dengan status PENDING. Pembayaran akan diverifikasi sesuai metode yang dipilih.");
+            dispose();
+            new StrukFilm(idPemesanan, idPengguna).setVisible(true);
+        } catch (SQLException exception) {
+            java.util.logging.Logger.getLogger(CheckOut.class.getName()).log(
+                    java.util.logging.Level.SEVERE, "Pemesanan gagal disimpan", exception);
+            JOptionPane.showMessageDialog(this,
+                    "Pemesanan gagal disimpan. " + exception.getMessage(), "Kesalahan pemesanan",
+                    JOptionPane.ERROR_MESSAGE);
+            jButton1.setEnabled(true);
+        }
     }
 
     /**

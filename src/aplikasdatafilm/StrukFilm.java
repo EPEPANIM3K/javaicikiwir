@@ -3,6 +3,10 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package aplikasdatafilm;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -10,11 +14,88 @@ package aplikasdatafilm;
  */
 public class StrukFilm extends javax.swing.JFrame {
 
+    private long idPengguna;
+    private long idPemesanan;
+    private final java.text.NumberFormat formatRupiah = java.text.NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
+    private final DateTimeFormatter formatTanggal = DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm", new Locale("id", "ID"));
+    private final DateTimeFormatter formatJam = DateTimeFormatter.ofPattern("HH:mm");
+
     /**
      * Creates new form Login
      */
     public StrukFilm() {
+        this(0, 0);
+    }
+
+    public StrukFilm(long idPemesanan, long idPengguna) {
+        this.idPemesanan = idPemesanan;
+        this.idPengguna = idPengguna;
         initComponents();
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        for (javax.swing.JTextField field : new javax.swing.JTextField[]{jTextField1, jTextField2,
+                jTextField3, jTextField4, jTextField5, jTextField6, jTextField7, jTextField8,
+                jTextField9, jTextField10}) {
+            field.setEditable(false);
+        }
+        JBuutton.addActionListener(event -> {
+            dispose();
+        });
+        jButton1.addActionListener(event -> cetakStruk());
+        muatStruk();
+    }
+
+    private void muatStruk() {
+        if (idPemesanan <= 0) {
+            return;
+        }
+        try {
+            PemesananService.Struk struk = PemesananService.ambilStruk(idPemesanan);
+            jTextField1.setText(struk.judul());
+            jTextField2.setText(Long.toString(struk.idPemesanan()));
+            jTextField3.setText(formatTanggal.format(struk.dibuatPada()));
+            jTextField4.setText(formatTanggal.format(struk.mulaiTayang()));
+            jTextField5.setText(formatJam.format(struk.mulaiTayang()) + " / " + struk.durasiMenit() + " menit");
+            jTextField6.setText(struk.namaStudio());
+            jTextField7.setText(struk.kodeKursi());
+            jTextField8.setText(Integer.toString(struk.jumlah()));
+            jTextField9.setText(formatRupiah.format(struk.hargaTiket()));
+            jTextField10.setText(formatRupiah.format(struk.total()));
+            jLabel2.setText("STRUK PEMBELIAN - " + struk.statusPembayaran());
+        } catch (SQLException exception) {
+            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(
+                    java.util.logging.Level.SEVERE, "Gagal memuat struk", exception);
+            JOptionPane.showMessageDialog(this, "Struk gagal dimuat. Periksa koneksi database.",
+                    "Kesalahan database", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void cetakStruk() {
+        java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
+        job.setJobName("Struk Pemesanan " + idPemesanan);
+        job.setPrintable((graphics, pageFormat, pageIndex) -> {
+            if (pageIndex > 0) {
+                return java.awt.print.Printable.NO_SUCH_PAGE;
+            }
+            java.awt.Graphics2D graphics2D = (java.awt.Graphics2D) graphics.create();
+            double scale = Math.min(pageFormat.getImageableWidth() / jPanel1.getWidth(),
+                    pageFormat.getImageableHeight() / jPanel1.getHeight());
+            graphics2D.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+            graphics2D.scale(scale, scale);
+            jPanel1.printAll(graphics2D);
+            graphics2D.dispose();
+            return java.awt.print.Printable.PAGE_EXISTS;
+        });
+        if (!job.printDialog()) {
+            return;
+        }
+        try {
+            job.print();
+        } catch (java.awt.print.PrinterException exception) {
+            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(
+                    java.util.logging.Level.SEVERE, "Gagal mencetak struk", exception);
+            JOptionPane.showMessageDialog(this, "Struk gagal dicetak: " + exception.getMessage(),
+                    "Kesalahan cetak", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**

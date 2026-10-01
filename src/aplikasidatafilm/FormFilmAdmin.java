@@ -4,6 +4,15 @@
  */
 package aplikasidatafilm;
 
+import Koneksi.Koneksi;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
 /**
  *
  * @author WINDOWS 11
@@ -11,12 +20,36 @@ package aplikasidatafilm;
 public class FormFilmAdmin extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormFilmAdmin.class.getName());
+    private Map<String, Integer> genreMap = new HashMap<>();
 
-    /**
-     * Creates new form FormFilmAdmin
-     */
     public FormFilmAdmin() {
         initComponents();
+        jTextFieldID.setEditable(false);
+        loadComboGenre();
+        loadDataFilm();
+
+        jButton1.addActionListener(e -> tambahFilm());
+        jButton3.addActionListener(e -> editFilm());
+        jButton4.addActionListener(e -> hapusFilm());
+        jButton5.addActionListener(e -> cariDataFilm());
+
+        jButton7.addActionListener(e -> {
+            new FormTambahGenre().setVisible(true);
+            dispose();
+        });
+
+        jTable1.getSelectionModel().addListSelectionListener(event -> {
+            if (!event.getValueIsAdjusting() && jTable1.getSelectedRow() != -1) {
+                int row = jTable1.getSelectedRow();
+                jTextFieldID.setText(jTable1.getValueAt(row, 0).toString());
+                jTextFieldJUDULFILM.setText(jTable1.getValueAt(row, 1).toString());
+                jComboBoxGENRE.setSelectedItem(jTable1.getValueAt(row, 2).toString());
+                jTextFieldTAHUN.setText(jTable1.getValueAt(row, 3).toString());
+                jTextFieldSUTRADARA.setText(jTable1.getValueAt(row, 4).toString());
+                jTextFieldDURASI.setText(jTable1.getValueAt(row, 5).toString());
+                jTextFieldRATING.setText(jTable1.getValueAt(row, 6).toString());
+            }
+        });
     }
 
     /**
@@ -73,7 +106,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
 
         jLabel8.setText("Rating       :");
 
-        jButton1.setText("TAMBAH");
+        jButton1.setText("TAMBAH FILM");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
@@ -146,11 +179,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                                         .addComponent(jTextField1))
                                     .addGroup(jPanel1Layout.createSequentialGroup()
                                         .addComponent(jButton1)
-                                        .addGap(41, 41, 41)
-                                        .addComponent(jButton3)
-                                        .addGap(52, 52, 52)
-                                        .addComponent(jButton4)
-                                        .addGap(50, 50, 50)))
+                                        .addGap(287, 287, 287)))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(12, 12, 12))
@@ -178,8 +207,15 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 .addContainerGap())
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jLabel1)
-                .addGap(319, 319, 319))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addGap(319, 319, 319))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jButton3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton4)
+                        .addContainerGap())))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -216,10 +252,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     .addComponent(jLabel8)
                     .addComponent(jTextFieldRATING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(37, 37, 37)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1)
-                    .addComponent(jButton3)
-                    .addComponent(jButton4))
+                .addComponent(jButton1)
                 .addGap(37, 37, 37)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel9)
@@ -227,7 +260,11 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     .addComponent(jButton5))
                 .addGap(18, 18, 18)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 289, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(15, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton4)
+                    .addComponent(jButton3))
+                .addContainerGap(43, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -269,6 +306,224 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     private void jComboBoxGENREActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBoxGENREActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jComboBoxGENREActionPerformed
+
+    private void loadComboGenre() {
+        jComboBoxGENRE.removeAllItems();
+        genreMap.clear();
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre");
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                int id = rs.getInt("id_genre");
+                String nama = rs.getString("nama_genre");
+                genreMap.put(nama, id);
+                jComboBoxGENRE.addItem(nama);
+            }
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Genre gagal dimuat.", ex);
+        }
+    }
+
+    private DefaultTableModel modelFilmKosong() {
+        return new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
+    private record FilmInput(String judul, int idGenre, int tahun, String sutradara,
+            int durasi, java.math.BigDecimal rating) {
+    }
+
+    private FilmInput bacaInputFilm() {
+        String judul = jTextFieldJUDULFILM.getText().trim();
+        String namaGenre = (String) jComboBoxGENRE.getSelectedItem();
+        String tahunText = jTextFieldTAHUN.getText().trim();
+        String sutradara = jTextFieldSUTRADARA.getText().trim();
+        String durasiText = jTextFieldDURASI.getText().trim();
+        String ratingText = jTextFieldRATING.getText().trim().replace(',', '.');
+        Integer idGenre = namaGenre == null ? null : genreMap.get(namaGenre);
+
+        if (judul.isEmpty() || idGenre == null || tahunText.isEmpty() || sutradara.isEmpty()
+                || durasiText.isEmpty() || ratingText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua field harus diisi dan genre harus tersedia.");
+            return null;
+        }
+        if (judul.length() > 200 || sutradara.length() > 120) {
+            JOptionPane.showMessageDialog(this, "Judul maksimal 200 karakter dan sutradara maksimal 120 karakter.");
+            return null;
+        }
+
+        try {
+            int tahun = Integer.parseInt(tahunText);
+            int durasi = Integer.parseInt(durasiText);
+            java.math.BigDecimal rating = new java.math.BigDecimal(ratingText);
+            if (tahun < 0 || tahun > 65535 || durasi < 1 || durasi > 65535
+                    || rating.compareTo(java.math.BigDecimal.ZERO) < 0
+                    || rating.compareTo(new java.math.BigDecimal("10.0")) > 0 || rating.scale() > 1) {
+                JOptionPane.showMessageDialog(this,
+                        "Tahun/durasi di luar batas database; durasi harus positif dan rating 0 sampai 10 (maksimal 1 desimal).");
+                return null;
+            }
+            return new FilmInput(judul, idGenre, tahun, sutradara, durasi, rating);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Tahun dan durasi harus bilangan bulat; rating harus angka valid.");
+            return null;
+        }
+    }
+
+    private void tampilkanErrorDatabase(String pesan, SQLException exception) {
+        logger.log(java.util.logging.Level.SEVERE, pesan, exception);
+        JOptionPane.showMessageDialog(this, pesan + " Periksa koneksi dan relasi data.",
+                "Kesalahan database", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void loadDataFilm() {
+        DefaultTableModel model = modelFilmKosong();
+        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating " +
+                     "FROM film f JOIN genre g ON f.id_genre = g.id_genre ORDER BY f.id_film ASC";
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                    rs.getInt("id_film"), rs.getString("judul"), rs.getString("nama_genre"),
+                    rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating")
+                });
+            }
+            jTable1.setModel(model);
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Data film gagal dimuat.", ex);
+        }
+    }
+
+    private void cariDataFilm() {
+        String keyword = jTextField1.getText().trim();
+        DefaultTableModel model = modelFilmKosong();
+        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating " +
+                     "FROM film f JOIN genre g ON f.id_genre = g.id_genre " +
+                     "WHERE f.judul LIKE ? OR f.sutradara LIKE ? ORDER BY f.id_film ASC";
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "%" + keyword + "%");
+            stmt.setString(2, "%" + keyword + "%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getInt("id_film"), rs.getString("judul"), rs.getString("nama_genre"),
+                        rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating")
+                    });
+                }
+            }
+            jTable1.setModel(model);
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Pencarian film gagal.", ex);
+        }
+    }
+
+    private void clearFields() {
+        jTextFieldID.setText("");
+        jTextFieldJUDULFILM.setText("");
+        jTextFieldTAHUN.setText("");
+        jTextFieldSUTRADARA.setText("");
+        jTextFieldDURASI.setText("");
+        jTextFieldRATING.setText("");
+        if(jComboBoxGENRE.getItemCount() > 0) jComboBoxGENRE.setSelectedIndex(0);
+    }
+
+    private void tambahFilm() {
+        FilmInput input = bacaInputFilm();
+        if (input == null) {
+            return;
+        }
+        String sql = "INSERT INTO film (judul, id_genre, tahun, sutradara, durasi_menit, rating) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, input.judul());
+                stmt.setInt(2, input.idGenre());
+                stmt.setInt(3, input.tahun());
+                stmt.setString(4, input.sutradara());
+                stmt.setInt(5, input.durasi());
+                stmt.setBigDecimal(6, input.rating());
+                stmt.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Data film berhasil ditambahkan!");
+                clearFields();
+                loadDataFilm();
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Film gagal ditambahkan. Pastikan genre masih tersedia.", ex);
+        }
+    }
+
+    private void editFilm() {
+        String idStr = jTextFieldID.getText().trim();
+        if(idStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih data dari tabel terlebih dahulu!");
+            return;
+        }
+
+        FilmInput input = bacaInputFilm();
+        if (input == null) {
+            return;
+        }
+        try {
+            int id = Integer.parseInt(idStr);
+            if (id <= 0) {
+                throw new NumberFormatException();
+            }
+            String sql = "UPDATE film SET judul=?, id_genre=?, tahun=?, sutradara=?, durasi_menit=?, rating=? WHERE id_film=?";
+            try (Connection conn = Koneksi.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, input.judul());
+                stmt.setInt(2, input.idGenre());
+                stmt.setInt(3, input.tahun());
+                stmt.setString(4, input.sutradara());
+                stmt.setInt(5, input.durasi());
+                stmt.setBigDecimal(6, input.rating());
+                stmt.setInt(7, id);
+                if (stmt.executeUpdate() == 0) {
+                    JOptionPane.showMessageDialog(this, "Film tidak ditemukan atau sudah dihapus.");
+                    return;
+                }
+                JOptionPane.showMessageDialog(this, "Data film berhasil diubah!");
+                clearFields();
+                loadDataFilm();
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "ID film harus berupa bilangan bulat yang valid.");
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Film gagal diubah.", ex);
+        }
+    }
+
+    private void hapusFilm() {
+        String idStr = jTextFieldID.getText().trim();
+        if(idStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih data dari tabel terlebih dahulu!");
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus film ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
+        if(confirm == JOptionPane.YES_OPTION) {
+            try (Connection conn = Koneksi.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM film WHERE id_film=?")) {
+                stmt.setInt(1, Integer.parseInt(idStr));
+                if (stmt.executeUpdate() == 0) {
+                    JOptionPane.showMessageDialog(this, "Film tidak ditemukan atau sudah dihapus.");
+                    return;
+                }
+                JOptionPane.showMessageDialog(this, "Data film berhasil dihapus!");
+                clearFields();
+                loadDataFilm();
+            } catch(SQLException ex) {
+                String pesan = "23000".equals(ex.getSQLState())
+                        ? "Film tidak dapat dihapus karena masih digunakan jadwal tayang."
+                        : "Film gagal dihapus. Periksa koneksi database.";
+                tampilkanErrorDatabase(pesan, ex);
+            }
+        }
+    }
 
     /**
      * @param args the command line arguments

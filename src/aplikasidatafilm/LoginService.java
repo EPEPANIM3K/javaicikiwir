@@ -22,10 +22,18 @@ public final class LoginService {
         INVALID
     }
 
+    public record AuthenticatedUser(long idPengguna, String nama, String email, Role role) {
+    }
+
     private LoginService() {
     }
 
     public static Role authenticate(String email, char[] password)
+            throws SQLException, NoSuchAlgorithmException {
+        return authenticateUser(email, password).role();
+    }
+
+    public static AuthenticatedUser authenticateUser(String email, char[] password)
             throws SQLException, NoSuchAlgorithmException {
         String submittedHash = sha256(password);
         Connection connection = Koneksi.getConnection();
@@ -34,27 +42,37 @@ public final class LoginService {
         }
 
         try (connection) {
-            String sql = "SELECT password_hash, role FROM pengguna WHERE email = ?";
+            String sql = "SELECT id_pengguna, nama, email, password_hash, role FROM pengguna WHERE email = ?";
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, email);
                 try (ResultSet result = statement.executeQuery()) {
                     if (!result.next()) {
-                        return Role.INVALID;
+                        return new AuthenticatedUser(0, null, null, Role.INVALID);
                     }
 
                     String storedHash = result.getString("password_hash");
-                    if (!passwordMatches(storedHash, submittedHash)) {
-                        return Role.INVALID;
+                    String plainPassword = new String(password);
+                    if (storedHash.equals(plainPassword)) {
+                        String upgradeSql = "UPDATE pengguna SET password_hash = ? WHERE id_pengguna = ?";
+                        try (PreparedStatement upgrade = connection.prepareStatement(upgradeSql)) {
+                            upgrade.setString(1, submittedHash);
+                            upgrade.setLong(2, result.getLong("id_pengguna"));
+                            upgrade.executeUpdate();
+                        }
+                    } else if (!passwordMatches(storedHash, submittedHash)) {
+                        return new AuthenticatedUser(0, null, null, Role.INVALID);
                     }
 
                     String role = result.getString("role");
                     if ("ADMIN".equals(role)) {
-                        return Role.ADMIN;
+                        return new AuthenticatedUser(result.getLong("id_pengguna"), result.getString("nama"),
+                                result.getString("email"), Role.ADMIN);
                     }
                     if ("USER".equals(role)) {
-                        return Role.PENGGUNA;
+                        return new AuthenticatedUser(result.getLong("id_pengguna"), result.getString("nama"),
+                                result.getString("email"), Role.PENGGUNA);
                     }
-                    return Role.INVALID;
+                    return new AuthenticatedUser(0, null, null, Role.INVALID);
                 }
             }
         }

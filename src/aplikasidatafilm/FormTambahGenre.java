@@ -4,6 +4,15 @@
  */
 package aplikasidatafilm;
 
+import aplikasdatafilm.FormFilmAdmin;
+import Koneksi.Koneksi;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
 /**
  *
  * @author WINDOWS 11
@@ -17,6 +26,20 @@ public class FormTambahGenre extends javax.swing.JFrame {
      */
     public FormTambahGenre() {
         initComponents();
+        loadDataGenre();
+        jButtonCARI.addActionListener(e -> cariDataGenre());
+        jButtonTAMBAH.addActionListener(e -> tambahGenre());
+        jButtonHAPUS.addActionListener(e -> hapusGenre());
+        jButtonKEMBALI.addActionListener(e -> {
+            dispose();
+            new FormFilmAdmin().setVisible(true);
+        });
+        jTableGENRE.getSelectionModel().addListSelectionListener(event -> {
+            if (!event.getValueIsAdjusting() && jTableGENRE.getSelectedRow() != -1) {
+                int row = jTableGENRE.getSelectedRow();
+                jTextFieldGENRE.setText(jTableGENRE.getValueAt(row, 1).toString());
+            }
+        });
     }
 
     /**
@@ -191,6 +214,100 @@ public class FormTambahGenre extends javax.swing.JFrame {
     private void jButtonHAPUSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonHAPUSActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jButtonHAPUSActionPerformed
+
+    private void loadDataGenre() {
+        DefaultTableModel model = modelGenreKosong();
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre ORDER BY id_genre ASC");
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                model.addRow(new Object[]{rs.getInt("id_genre"), rs.getString("nama_genre")});
+            }
+            jTableGENRE.setModel(model);
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Data genre gagal dimuat.", ex);
+        }
+    }
+
+    private DefaultTableModel modelGenreKosong() {
+        return new DefaultTableModel(new String[]{"ID", "Genre Film"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
+    private void tampilkanErrorDatabase(String pesan, SQLException exception) {
+        logger.log(java.util.logging.Level.SEVERE, pesan, exception);
+        JOptionPane.showMessageDialog(this, pesan + " Periksa koneksi database.",
+                "Kesalahan database", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void cariDataGenre() {
+        String keyword = jTextFieldCARI.getText().trim();
+        DefaultTableModel model = modelGenreKosong();
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre WHERE nama_genre LIKE ? ORDER BY id_genre ASC")) {
+
+            stmt.setString(1, "%" + keyword + "%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{rs.getInt("id_genre"), rs.getString("nama_genre")});
+                }
+            }
+            jTableGENRE.setModel(model);
+        } catch (SQLException ex) {
+            tampilkanErrorDatabase("Pencarian genre gagal.", ex);
+        }
+    }
+
+    private void tambahGenre() {
+        String namaGenre = jTextFieldGENRE.getText().trim();
+        if (namaGenre.isEmpty() || namaGenre.length() > 80) {
+            JOptionPane.showMessageDialog(this, "Nama genre wajib diisi dan maksimal 80 karakter.");
+            return;
+        }
+
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("INSERT INTO genre (nama_genre) VALUES (?)")) {
+            stmt.setString(1, namaGenre);
+            stmt.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Data genre berhasil ditambahkan");
+            jTextFieldGENRE.setText("");
+            loadDataGenre();
+        } catch (SQLException ex) {
+            String pesan = "23000".equals(ex.getSQLState())
+                    ? "Genre tersebut sudah terdaftar." : "Genre gagal ditambahkan.";
+            tampilkanErrorDatabase(pesan, ex);
+        }
+    }
+
+    private void hapusGenre() {
+        int selectedRow = jTableGENRE.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih genre yang ingin dihapus pada tabel terlebih dahulu");
+            return;
+        }
+
+        int id = (int) jTableGENRE.getValueAt(selectedRow, 0);
+        int confirm = JOptionPane.showConfirmDialog(this, "Apakah Anda yakin ingin menghapus genre ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try (Connection conn = Koneksi.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM genre WHERE id_genre = ?")) {
+                stmt.setInt(1, id);
+                stmt.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Data genre berhasil dihapus");
+                jTextFieldGENRE.setText("");
+                loadDataGenre();
+            } catch (SQLIntegrityConstraintViolationException ex) {
+                JOptionPane.showMessageDialog(this, "Gagal menghapus genre karena masih digunakan oleh data film.");
+            } catch (SQLException ex) {
+                tampilkanErrorDatabase("Genre gagal dihapus.", ex);
+            }
+        }
+    }
 
     /**
      * @param args the command line arguments

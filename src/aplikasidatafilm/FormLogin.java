@@ -80,15 +80,15 @@ public class FormLogin extends JFrame {
         }
 
         try {
-            LoginService.Role role = LoginService.authenticate(identity, password);
-            if (role == LoginService.Role.INVALID) {
+            LoginService.AuthenticatedUser user = LoginService.authenticateUser(identity, password);
+            if (user.role() == LoginService.Role.INVALID) {
                 JOptionPane.showMessageDialog(this, "Username/email atau password salah.");
             } else {
                 dispose();
-                if (role == LoginService.Role.ADMIN) {
-                    new Menu().setVisible(true);
+                if (user.role() == LoginService.Role.ADMIN) {
+                    new aplikasdatafilm.Menu().setVisible(true);
                 } else {
-                    new aplikasdatafilm.PilihFilm().setVisible(true);
+                    new aplikasdatafilm.PilihFilm(user.idPengguna()).setVisible(true);
                 }
             }
         } catch (NoSuchAlgorithmException ex) {

@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package aplikasidatafilm;
+package aplikasdatafilm;
 
 /**
  *
@@ -137,7 +137,7 @@ public class Menu extends javax.swing.JFrame {
         // TODO add your handling code here:
         dispose();
         
-        new FormLogin().setVisible(true);
+        new aplikasdatafilm.Login().setVisible(true);
         
     }//GEN-LAST:event_jMenuItemLogOutActionPerformed
 

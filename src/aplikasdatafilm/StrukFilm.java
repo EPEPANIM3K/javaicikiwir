@@ -42,6 +42,7 @@ public class StrukFilm extends javax.swing.JFrame {
         });
         jButton1.addActionListener(event -> cetakStruk());
         muatStruk();
+        UserMenuBar.buat(this, idPengguna);
     }
 
     private void muatStruk() {

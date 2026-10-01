@@ -29,7 +29,6 @@ public class Menu extends javax.swing.JFrame {
     private void initComponents() {
 
         jMenuItem1 = new javax.swing.JMenuItem();
-        jLabel1 = new javax.swing.JLabel();
         jMenuBarMenu = new javax.swing.JMenuBar();
         jMenuUser = new javax.swing.JMenu();
         jMenuItemLogOut = new javax.swing.JMenuItem();
@@ -40,9 +39,6 @@ public class Menu extends javax.swing.JFrame {
         jMenuItem1.setText("jMenuItem1");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
-        jLabel1.setText("Halo Admin!");
 
         jMenuUser.setText("Admin");
         jMenuUser.addActionListener(new java.awt.event.ActionListener() {
@@ -95,17 +91,11 @@ public class Menu extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(165, Short.MAX_VALUE)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 158, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(163, 163, 163))
+            .addGap(0, 486, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(149, 149, 149)
-                .addComponent(jLabel1)
-                .addContainerGap(164, Short.MAX_VALUE))
+            .addGap(0, 345, Short.MAX_VALUE)
         );
 
         pack();
@@ -167,7 +157,6 @@ public class Menu extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JMenuBar jMenuBarMenu;
     private javax.swing.JMenu jMenuData;
     private javax.swing.JMenuItem jMenuItem1;

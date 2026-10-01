@@ -24,6 +24,7 @@ public class PilihFilm extends javax.swing.JFrame {
     private final JLabel[] labelWaktu;
     private final JLabel[] labelHarga;
     private final JLabel[] labelDurasi;
+    private final JLabel[] labelPoster;
     private final JButton[] tombolBeli;
     private final DateTimeFormatter formatWaktu = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -43,6 +44,7 @@ public class PilihFilm extends javax.swing.JFrame {
         labelWaktu = new JLabel[]{jLabel7, jLabel11, jLabel15};
         labelHarga = new JLabel[]{jLabel18, jLabel17, jLabel16};
         labelDurasi = new JLabel[]{jLabel19, jLabel20, jLabel21};
+        labelPoster = new JLabel[]{jLabel2, jLabel12, jLabel8};
         tombolBeli = new JButton[]{jButton2, jButton3, jButton4};
         jButton1.addActionListener(event -> muatJadwal());
         for (int index = 0; index < tombolBeli.length; index++) {
@@ -59,6 +61,7 @@ public class PilihFilm extends javax.swing.JFrame {
             }
         });
         muatJadwal();
+        UserMenuBar.buat(this, idPengguna);
     }
 
     private void muatJadwal() {
@@ -76,12 +79,15 @@ public class PilihFilm extends javax.swing.JFrame {
                     labelWaktu[index].setText(formatWaktu.format(jadwal.mulaiTayang()));
                     labelHarga[index].setText("Rp " + jadwal.hargaTiket().toPlainString());
                     labelDurasi[index].setText("Durasi: " + jadwal.durasiMenit() + " menit");
+                    PosterFetcher.muat(labelPoster[index], jadwal.urlPoster());
                 } else {
                     labelJudul[index].setText("Jadwal tidak tersedia");
                     labelGenre[index].setText("");
                     labelWaktu[index].setText("");
                     labelHarga[index].setText("");
                     labelDurasi[index].setText("");
+                    labelPoster[index].setIcon(null);
+                    labelPoster[index].setText("");
                 }
             }
             if (daftarJadwal.isEmpty()) {

@@ -13,14 +13,18 @@ public class BeliTiket extends javax.swing.JFrame {
     /**
      * Creates new form Beli
      */
+    private long idPengguna;
+
     public BeliTiket() {
         initComponents();
     }
 
     public BeliTiket(long idPengguna, PemesananService.Jadwal jadwal) {
         this();
+        this.idPengguna = idPengguna;
         jTextFieldJudulFilm.setText(jadwal.judul());
         jTextFieldJudulFilm.setEditable(false);
+        UserMenuBar.buat(this, idPengguna);
     }
 
     /**
@@ -621,7 +625,7 @@ public class BeliTiket extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 415, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(105, Short.MAX_VALUE))
         );
 
         pack();

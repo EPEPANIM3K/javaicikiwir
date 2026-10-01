@@ -47,6 +47,7 @@ public class CheckOut extends javax.swing.JFrame {
         metodePembayaran.add(jRadioButton3);
         tampilkanRingkasan();
         jButton1.addActionListener(event -> simpanPemesanan());
+        UserMenuBar.buat(this, idPengguna);
     }
 
     private void tampilkanRingkasan() {

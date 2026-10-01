@@ -18,7 +18,7 @@ public final class PemesananService {
 
     public record Jadwal(long idJadwal, int idFilm, String judul, String genre, int tahun,
             String sutradara, int durasiMenit, int idStudio, String namaStudio,
-            LocalDateTime mulaiTayang, BigDecimal hargaTiket) {
+            LocalDateTime mulaiTayang, BigDecimal hargaTiket, String urlPoster) {
     }
 
     public record Kursi(int idKursi, String kodeKursi, boolean sudahDipesan) {
@@ -39,7 +39,7 @@ public final class PemesananService {
     public static List<Jadwal> cariJadwal(String kataKunci) throws SQLException {
         String sql = "SELECT j.id_jadwal, f.id_film, f.judul, g.nama_genre, f.tahun, "
                 + "f.sutradara, f.durasi_menit, j.id_studio, s.nama_studio, "
-                + "j.mulai_tayang, j.harga_tiket "
+                + "j.mulai_tayang, j.harga_tiket, f.url_poster "
                 + "FROM jadwal_tayang j JOIN film f ON f.id_film = j.id_film "
                 + "JOIN genre g ON g.id_genre = f.id_genre "
                 + "JOIN studio s ON s.id_studio = j.id_studio "
@@ -64,7 +64,7 @@ public final class PemesananService {
     public static List<Jadwal> jadwalUntukFilm(int idFilm) throws SQLException {
         String sql = "SELECT j.id_jadwal, f.id_film, f.judul, g.nama_genre, f.tahun, "
                 + "f.sutradara, f.durasi_menit, j.id_studio, s.nama_studio, "
-                + "j.mulai_tayang, j.harga_tiket "
+                + "j.mulai_tayang, j.harga_tiket, f.url_poster "
                 + "FROM jadwal_tayang j JOIN film f ON f.id_film = j.id_film "
                 + "JOIN genre g ON g.id_genre = f.id_genre "
                 + "JOIN studio s ON s.id_studio = j.id_studio "
@@ -242,6 +242,6 @@ public final class PemesananService {
                 result.getString("judul"), result.getString("nama_genre"), result.getInt("tahun"),
                 result.getString("sutradara"), result.getInt("durasi_menit"), result.getInt("id_studio"),
                 result.getString("nama_studio"), mulaiTayang.toLocalDateTime(),
-                result.getBigDecimal("harga_tiket"));
+                result.getBigDecimal("harga_tiket"), result.getString("url_poster"));
     }
 }

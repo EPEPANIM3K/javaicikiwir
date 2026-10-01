@@ -46,6 +46,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         PlaceholderSupport.install(jTextFieldTanggal, "YYYY-MM-DD");
         PlaceholderSupport.install(jTextFieldTAHUN1, "Contoh: 14.00, 15.00");
         PlaceholderSupport.install(jTextFieldHarga, "Harga tiket");
+        PlaceholderSupport.install(jTextFieldURLPoster, "URL poster gambar (http/https)");
         jButton3.setVisible(false);
         jButton4.setVisible(false);
         loadComboGenre();
@@ -73,6 +74,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             dispose();
         });
 
+        jButtonUploadPoster.addActionListener(e -> pilihDanUploadPoster());
+
         jTable1.getSelectionModel().addListSelectionListener(event -> {
             if (!event.getValueIsAdjusting()) {
                 int row = jTable1.getSelectedRow();
@@ -80,6 +83,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     jTextFieldID.setText("");
                     setJadwalAwal(null, null, null);
                     updateFilmActionButtons(false);
+                    PlaceholderSupport.reset(jTextFieldURLPoster);
                     return;
                 }
                 jTextFieldID.setText(jTable1.getValueAt(row, 0).toString());
@@ -89,6 +93,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 PlaceholderSupport.setText(jTextFieldSUTRADARA, jTable1.getValueAt(row, 4).toString());
                 PlaceholderSupport.setText(jTextFieldDURASI, jTable1.getValueAt(row, 5).toString());
                 PlaceholderSupport.setText(jTextFieldRATING, jTable1.getValueAt(row, 6).toString());
+                Object posterVal = jTable1.getColumnCount() > 7 ? jTable1.getValueAt(row, 7) : null;
+                PlaceholderSupport.setText(jTextFieldURLPoster, posterVal != null ? posterVal.toString() : "");
                 muatJadwalFilm(Integer.parseInt(jTextFieldID.getText()));
                 updateFilmActionButtons(true);
             }
@@ -102,6 +108,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 }
             }
         });
+        AdminMenuBar.buat(this);
         pack();
         setLocationRelativeTo(null);
     }
@@ -282,30 +289,33 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         jLabel8 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         jButton9 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
-        jLabel9 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jButton5 = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
         jTextFieldID = new javax.swing.JTextField();
         jTextFieldJUDULFILM = new javax.swing.JTextField();
         jTextFieldTAHUN = new javax.swing.JTextField();
         jTextFieldSUTRADARA = new javax.swing.JTextField();
         jTextFieldDURASI = new javax.swing.JTextField();
         jTextFieldRATING = new javax.swing.JTextField();
+        jTextFieldURLPoster = new javax.swing.JTextField();
+        jLabelURLPoster = new javax.swing.JLabel();
+        jButtonUploadPoster = new javax.swing.JButton();
         jComboBoxGENRE = new javax.swing.JComboBox<>();
         jButton7 = new javax.swing.JButton();
         jTextFieldHarga = new javax.swing.JTextField();
-        jTextFieldTanggal = new javax.swing.JTextField();
         jLabel11 = new javax.swing.JLabel();
         jLabel12 = new javax.swing.JLabel();
-        jLabel14 = new javax.swing.JLabel();
         jComboBoxstudio = new javax.swing.JComboBox<>();
         jButton8 = new javax.swing.JButton();
         jLabel13 = new javax.swing.JLabel();
         jTextFieldTAHUN1 = new javax.swing.JTextField();
+        jLabel14 = new javax.swing.JLabel();
+        jTextFieldTanggal = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
+        jTextField1 = new javax.swing.JTextField();
+        jButton5 = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
+        jButton3 = new javax.swing.JButton();
+        jButton4 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -335,37 +345,6 @@ public class FormFilmAdmin extends javax.swing.JFrame {
 
         jButton9.setText("CLEAR FIELD");
 
-        jButton3.setText("EDIT");
-
-        jButton4.setText("HAPUS");
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
-            }
-        });
-
-        jLabel9.setText("Cari Film :");
-
-        jButton5.setText("CARI");
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
-            }
-        });
-
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null}
-            },
-            new String [] {
-                "ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating"
-            }
-        ));
-        jScrollPane1.setViewportView(jTable1);
-
         jTextFieldID.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jTextFieldIDActionPerformed(evt);
@@ -380,11 +359,15 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         });
 
         jButton7.setText("Tambah Genre");
+        jButton7.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton7ActionPerformed(evt);
+            }
+        });
 
         jLabel11.setText("Harga       :");
 
         jLabel12.setText("Studio         :");
-        jLabel14.setText("Tanggal      :");
 
         jComboBoxstudio.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
         jComboBoxstudio.addActionListener(new java.awt.event.ActionListener() {
@@ -394,8 +377,19 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         });
 
         jButton8.setText("Tambah Studio");
+        jButton8.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton8ActionPerformed(evt);
+            }
+        });
 
         jLabel13.setText("Jam Tayang:");
+
+        jLabel14.setText("Tanggal      :");
+
+        jLabelURLPoster.setText("URL Poster  :");
+
+        jButtonUploadPoster.setText("Upload...");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -412,59 +406,55 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jLabel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabelURLPoster, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jLabel12, javax.swing.GroupLayout.DEFAULT_SIZE, 69, Short.MAX_VALUE)
-                    .addComponent(jLabel14, javax.swing.GroupLayout.DEFAULT_SIZE, 69, Short.MAX_VALUE)
-                    .addComponent(jLabel13, javax.swing.GroupLayout.DEFAULT_SIZE, 69, Short.MAX_VALUE))
+                    .addComponent(jLabel14, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jTextFieldDURASI)
-                    .addComponent(jTextFieldSUTRADARA)
-                    .addComponent(jTextFieldTAHUN)
-                    .addComponent(jComboBoxGENRE, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jTextFieldJUDULFILM)
-                    .addComponent(jTextFieldID, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jTextFieldRATING, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jTextFieldHarga, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jComboBoxstudio, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jTextFieldTanggal)
-                    .addComponent(jTextFieldTAHUN1))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jButton7)
-                    .addComponent(jButton8))
-                .addGap(340, 340, 340))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addContainerGap(268, Short.MAX_VALUE)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addGap(319, 319, 319))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jButton3)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jComboBoxGENRE, javax.swing.GroupLayout.PREFERRED_SIZE, 149, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton4)
+                        .addComponent(jButton7)
+                        .addGap(0, 9, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jTextFieldDURASI)
+                            .addComponent(jTextFieldSUTRADARA)
+                            .addComponent(jTextFieldTAHUN)
+                            .addComponent(jTextFieldJUDULFILM)
+                            .addComponent(jTextFieldID, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jTextFieldRATING, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jTextFieldHarga, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(jTextFieldURLPoster)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jButtonUploadPoster))
+                            .addComponent(jTextFieldTanggal)
+                            .addComponent(jTextFieldTAHUN1)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(jComboBoxstudio, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jButton8)))
                         .addContainerGap())))
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(15, 15, 15)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(15, 15, 15)
                         .addComponent(jButton1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton9))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 326, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(268, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(141, 141, 141)
+                        .addComponent(jLabel1)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(29, 29, 29)
+                .addGap(28, 28, 28)
                 .addComponent(jLabel1)
-                .addGap(52, 52, 52)
+                .addGap(53, 53, 53)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(jTextFieldID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -510,23 +500,48 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel11)
                     .addComponent(jTextFieldHarga, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabelURLPoster)
+                    .addComponent(jTextFieldURLPoster, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButtonUploadPoster))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(jButton1)
-                        .addComponent(jButton9))
-                .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel9)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton5))
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 289, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(98, 98, 98)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton4)
-                    .addComponent(jButton3))
-                .addContainerGap(7, Short.MAX_VALUE))
+                    .addComponent(jButton1)
+                    .addComponent(jButton9))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
+
+        jLabel9.setText("Cari Film :");
+
+        jButton5.setText("CARI");
+        jButton5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton5ActionPerformed(evt);
+            }
+        });
+
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating"
+            }
+        ));
+        jScrollPane1.setViewportView(jTable1);
+
+        jButton3.setText("EDIT");
+
+        jButton4.setText("HAPUS");
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -534,7 +549,23 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(21, 21, 21)
+                        .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 326, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jButton3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton4))
+                    .addGroup(layout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 612, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -543,6 +574,19 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addGap(98, 98, 98)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel9)
+                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton5))
+                .addGap(18, 18, 18)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 187, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton4)
+                    .addComponent(jButton3))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
@@ -572,6 +616,14 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton1ActionPerformed
 
+    private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton7ActionPerformed
+
+    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton8ActionPerformed
+
     private void loadComboGenre() {
         jComboBoxGENRE.removeAllItems();
         genreMap.clear();
@@ -590,7 +642,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     }
 
     private DefaultTableModel modelFilmKosong() {
-        return new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating"}, 0) {
+        return new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating", "Poster"}, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -599,7 +651,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     }
 
     private record FilmInput(String judul, int idGenre, int tahun, String sutradara,
-            int durasi, java.math.BigDecimal rating, List<LocalTime> jamTayang,
+            int durasi, java.math.BigDecimal rating, String urlPoster, List<LocalTime> jamTayang,
             boolean jadwalDitentukan, LocalDate tanggalJadwal, Integer idStudio,
             java.math.BigDecimal hargaTiket) {
     }
@@ -611,6 +663,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         String sutradara = PlaceholderSupport.getText(jTextFieldSUTRADARA).trim();
         String durasiText = PlaceholderSupport.getText(jTextFieldDURASI).trim();
         String ratingText = PlaceholderSupport.getText(jTextFieldRATING).trim().replace(',', '.');
+        String urlPoster = PlaceholderSupport.getText(jTextFieldURLPoster).trim();
         Integer idGenre = namaGenre == null ? null : genreMap.get(namaGenre);
 
         if (judul.isEmpty() || idGenre == null || tahunText.isEmpty() || sutradara.isEmpty()
@@ -620,6 +673,10 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         }
         if (judul.length() > 200 || sutradara.length() > 120) {
             JOptionPane.showMessageDialog(this, "Judul maksimal 200 karakter dan sutradara maksimal 120 karakter.");
+            return null;
+        }
+        if (urlPoster.length() > 500) {
+            JOptionPane.showMessageDialog(this, "URL poster maksimal 500 karakter.");
             return null;
         }
 
@@ -700,6 +757,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 }
             }
             return new FilmInput(judul, idGenre, tahun, sutradara, durasi, rating,
+                    urlPoster.isEmpty() ? null : urlPoster,
                     List.copyOf(jamTayang), jadwalDitentukan, tanggalJadwal, idStudio, hargaTiket);
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Tahun dan durasi harus bilangan bulat; rating harus angka valid.");
@@ -801,7 +859,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
 
     private void loadDataFilm() {
         DefaultTableModel model = modelFilmKosong();
-        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating " +
+        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating, f.url_poster " +
                      "FROM film f JOIN genre g ON f.id_genre = g.id_genre ORDER BY f.id_film ASC";
         try (Connection conn = Koneksi.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -809,7 +867,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             while (rs.next()) {
                 model.addRow(new Object[]{
                     rs.getInt("id_film"), rs.getString("judul"), rs.getString("nama_genre"),
-                    rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating")
+                    rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating"),
+                    rs.getString("url_poster")
                 });
             }
             jTable1.setModel(model);
@@ -822,7 +881,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     private void cariDataFilm() {
         String keyword = PlaceholderSupport.getText(jTextField1).trim();
         DefaultTableModel model = modelFilmKosong();
-        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating " +
+        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating, f.url_poster " +
                      "FROM film f JOIN genre g ON f.id_genre = g.id_genre " +
                      "WHERE f.judul LIKE ? OR f.sutradara LIKE ? ORDER BY f.id_film ASC";
         try (Connection conn = Koneksi.getConnection();
@@ -833,7 +892,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 while (rs.next()) {
                     model.addRow(new Object[]{
                         rs.getInt("id_film"), rs.getString("judul"), rs.getString("nama_genre"),
-                        rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating")
+                        rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating"),
+                        rs.getString("url_poster")
                     });
                 }
             }
@@ -852,6 +912,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         PlaceholderSupport.reset(jTextFieldSUTRADARA);
         PlaceholderSupport.reset(jTextFieldDURASI);
         PlaceholderSupport.reset(jTextFieldRATING);
+        PlaceholderSupport.reset(jTextFieldURLPoster);
         resetJadwalFields();
         setJadwalAwal(null, null, null);
         jComboBoxGENRE.setSelectedIndex(-1);
@@ -863,7 +924,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         if (input == null) {
             return;
         }
-        String sql = "INSERT INTO film (judul, id_genre, tahun, sutradara, durasi_menit, rating) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO film (judul, id_genre, tahun, sutradara, durasi_menit, rating, url_poster) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = Koneksi.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
@@ -873,6 +934,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 stmt.setString(4, input.sutradara());
                 stmt.setInt(5, input.durasi());
                 stmt.setBigDecimal(6, input.rating());
+                stmt.setString(7, input.urlPoster());
                 stmt.executeUpdate();
                 try (ResultSet keys = stmt.getGeneratedKeys()) {
                     if (!keys.next()) {
@@ -913,7 +975,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             if (id <= 0) {
                 throw new NumberFormatException();
             }
-            String sql = "UPDATE film SET judul=?, id_genre=?, tahun=?, sutradara=?, durasi_menit=?, rating=? WHERE id_film=?";
+            String sql = "UPDATE film SET judul=?, id_genre=?, tahun=?, sutradara=?, durasi_menit=?, rating=?, url_poster=? WHERE id_film=?";
             try (Connection conn = Koneksi.getConnection()) {
                 conn.setAutoCommit(false);
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -923,7 +985,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     stmt.setString(4, input.sutradara());
                     stmt.setInt(5, input.durasi());
                     stmt.setBigDecimal(6, input.rating());
-                    stmt.setInt(7, id);
+                    stmt.setString(7, input.urlPoster());
+                    stmt.setInt(8, id);
                     if (stmt.executeUpdate() == 0) {
                         conn.rollback();
                         JOptionPane.showMessageDialog(this, "Film tidak ditemukan atau sudah dihapus.");
@@ -974,6 +1037,67 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         }
     }
 
+    private void pilihDanUploadPoster() {
+        if (!SupabaseStorageService.isConfigured()) {
+            int pilih = JOptionPane.showConfirmDialog(this,
+                    "Konfigurasi Supabase belum diisi di SupabaseStorageService.java.\n"
+                    + "Ganti SUPABASE_URL dan SUPABASE_KEY pada file tersebut dengan data akun Supabase Anda.\n\n"
+                    + "Apakah Anda ingin memasukkan URL gambar secara manual di kolom teks?",
+                    "Konfigurasi Supabase Diperlukan",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE);
+            if (pilih == JOptionPane.YES_OPTION) {
+                jTextFieldURLPoster.requestFocusInWindow();
+            }
+            return;
+        }
+
+        javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
+        fileChooser.setDialogTitle("Pilih Gambar Poster Film");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Gambar (*.jpg, *.jpeg, *.png, *.webp)", "jpg", "jpeg", "png", "webp"));
+
+        int hasil = fileChooser.showOpenDialog(this);
+        if (hasil != javax.swing.JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        java.io.File fileDipilih = fileChooser.getSelectedFile();
+        if (fileDipilih == null || !fileDipilih.exists()) {
+            return;
+        }
+
+        // Batas ukuran 5 MB
+        if (fileDipilih.length() > 5 * 1024 * 1024) {
+            JOptionPane.showMessageDialog(this, "Ukuran file terlalu besar! Maksimal 5 MB.");
+            return;
+        }
+
+        jButtonUploadPoster.setEnabled(false);
+        String teksLama = PlaceholderSupport.getText(jTextFieldURLPoster);
+        PlaceholderSupport.setText(jTextFieldURLPoster, "Mengunggah gambar ke Supabase...");
+
+        new Thread(() -> {
+            try {
+                String publicUrl = SupabaseStorageService.uploadGambar(fileDipilih);
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    PlaceholderSupport.setText(jTextFieldURLPoster, publicUrl);
+                    JOptionPane.showMessageDialog(this, "Poster berhasil diunggah ke Supabase!");
+                    jButtonUploadPoster.setEnabled(true);
+                });
+            } catch (Exception ex) {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    PlaceholderSupport.setText(jTextFieldURLPoster, teksLama);
+                    jButtonUploadPoster.setEnabled(true);
+                    JOptionPane.showMessageDialog(this,
+                            "Upload gagal: " + ex.getMessage(),
+                            "Kesalahan Upload",
+                            JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }, "supabase-upload").start();
+    }
+
     /**
      * @param args the command line arguments
      */
@@ -1007,6 +1131,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     private javax.swing.JButton jButton7;
     private javax.swing.JButton jButton8;
     private javax.swing.JButton jButton9;
+    private javax.swing.JButton jButtonUploadPoster;
     private javax.swing.JComboBox<String> jComboBoxGENRE;
     private javax.swing.JComboBox<String> jComboBoxstudio;
     private javax.swing.JLabel jLabel1;
@@ -1022,6 +1147,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
+    private javax.swing.JLabel jLabelURLPoster;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
@@ -1035,5 +1161,6 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     private javax.swing.JTextField jTextFieldTAHUN;
     private javax.swing.JTextField jTextFieldTAHUN1;
     private javax.swing.JTextField jTextFieldTanggal;
+    private javax.swing.JTextField jTextFieldURLPoster;
     // End of variables declaration//GEN-END:variables
 }

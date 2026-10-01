@@ -41,6 +41,7 @@ public class FormTambahGenre extends javax.swing.JFrame {
                 PlaceholderSupport.setText(jTextFieldGENRE, jTableGENRE.getValueAt(row, 1).toString());
             }
         });
+        AdminMenuBar.buat(this);
     }
 
     /**

@@ -61,6 +61,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         jButton1.addActionListener(e -> tambahFilm());
         jButton3.addActionListener(e -> editFilm());
         jButton4.addActionListener(e -> hapusFilm());
+        jButton9.addActionListener(e -> clearFields());
         jButton5.addActionListener(e -> cariDataFilm());
         jButton8.addActionListener(event -> {
             new FormTambahStudio().setVisible(true);
@@ -73,8 +74,14 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         });
 
         jTable1.getSelectionModel().addListSelectionListener(event -> {
-            if (!event.getValueIsAdjusting() && jTable1.getSelectedRow() != -1) {
+            if (!event.getValueIsAdjusting()) {
                 int row = jTable1.getSelectedRow();
+                if (row == -1) {
+                    jTextFieldID.setText("");
+                    setJadwalAwal(null, null, null);
+                    updateFilmActionButtons(false);
+                    return;
+                }
                 jTextFieldID.setText(jTable1.getValueAt(row, 0).toString());
                 PlaceholderSupport.setText(jTextFieldJUDULFILM, jTable1.getValueAt(row, 1).toString());
                 jComboBoxGENRE.setSelectedItem(jTable1.getValueAt(row, 2).toString());
@@ -83,6 +90,16 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 PlaceholderSupport.setText(jTextFieldDURASI, jTable1.getValueAt(row, 5).toString());
                 PlaceholderSupport.setText(jTextFieldRATING, jTable1.getValueAt(row, 6).toString());
                 muatJadwalFilm(Integer.parseInt(jTextFieldID.getText()));
+                updateFilmActionButtons(true);
+            }
+        });
+        jTable1.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent event) {
+                int row = jTable1.rowAtPoint(event.getPoint());
+                if (row >= 0 && jTable1.isRowSelected(row)) {
+                    javax.swing.SwingUtilities.invokeLater(jTable1::clearSelection);
+                }
             }
         });
         pack();
@@ -93,10 +110,11 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             java.math.BigDecimal hargaTiket, boolean memilikiTiket) {
     }
 
-    private void updateFilmActionButtons(int jumlahFilm) {
-        boolean adaFilm = jumlahFilm > 0;
-        jButton3.setVisible(adaFilm);
-        jButton4.setVisible(adaFilm);
+    private void updateFilmActionButtons(boolean adaPilihan) {
+        jButton3.setVisible(adaPilihan);
+        jButton3.setEnabled(adaPilihan);
+        jButton4.setVisible(adaPilihan);
+        jButton4.setEnabled(adaPilihan);
     }
 
     private void loadComboStudio() {
@@ -114,6 +132,10 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             jComboBoxstudio.setSelectedIndex(-1);
         } catch (SQLException exception) {
             tampilkanErrorDatabase("Data studio gagal dimuat.", exception);
+        }
+        if (studioMap.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Belum ada studio. Gunakan tombol Tambah Studio sebelum menyimpan jadwal.");
         }
     }
 
@@ -259,6 +281,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         jLabel7 = new javax.swing.JLabel();
         jLabel8 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
+        jButton9 = new javax.swing.JButton();
         jButton3 = new javax.swing.JButton();
         jButton4 = new javax.swing.JButton();
         jLabel9 = new javax.swing.JLabel();
@@ -309,6 +332,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 jButton1ActionPerformed(evt);
             }
         });
+
+        jButton9.setText("CLEAR FIELD");
 
         jButton3.setText("EDIT");
 
@@ -422,7 +447,10 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(15, 15, 15)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jButton1)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jButton1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jButton9))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -430,7 +458,6 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(268, javax.swing.GroupLayout.PREFERRED_SIZE))
-            .addComponent(jScrollPane1)
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -484,7 +511,9 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     .addComponent(jLabel11)
                     .addComponent(jTextFieldHarga, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton1)
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jButton1)
+                        .addComponent(jButton9))
                 .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel9)
@@ -630,9 +659,19 @@ public class FormFilmAdmin extends javax.swing.JFrame {
             if (jadwalDitentukan) {
                 String namaStudio = (String) jComboBoxstudio.getSelectedItem();
                 Integer studio = namaStudio == null ? null : studioMap.get(namaStudio);
-                if (tanggalText.isEmpty() || studio == null || hargaText.isEmpty()) {
-                    JOptionPane.showMessageDialog(this,
-                            "Isi tanggal, studio, dan harga tiket jika menambahkan atau mengubah jam tayang.");
+                if (tanggalText.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Tanggal tayang wajib diisi.");
+                    jTextFieldTanggal.requestFocusInWindow();
+                    return null;
+                }
+                if (studio == null) {
+                    JOptionPane.showMessageDialog(this, "Pilih studio sebelum menyimpan jam tayang.");
+                    jComboBoxstudio.requestFocusInWindow();
+                    return null;
+                }
+                if (hargaText.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Harga tiket wajib diisi.");
+                    jTextFieldHarga.requestFocusInWindow();
                     return null;
                 }
                 if (jamTayang.isEmpty() && (!modeEdit || filmGrupJadwalAwal == null)) {
@@ -774,7 +813,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 });
             }
             jTable1.setModel(model);
-            updateFilmActionButtons(model.getRowCount());
+            updateFilmActionButtons(false);
         } catch (SQLException ex) {
             tampilkanErrorDatabase("Data film gagal dimuat.", ex);
         }
@@ -799,13 +838,14 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                 }
             }
             jTable1.setModel(model);
-            updateFilmActionButtons(model.getRowCount());
+            updateFilmActionButtons(false);
         } catch (SQLException ex) {
             tampilkanErrorDatabase("Pencarian film gagal.", ex);
         }
     }
 
     private void clearFields() {
+        jTable1.clearSelection();
         jTextFieldID.setText("");
         PlaceholderSupport.reset(jTextFieldJUDULFILM);
         PlaceholderSupport.reset(jTextFieldTAHUN);
@@ -814,7 +854,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         PlaceholderSupport.reset(jTextFieldRATING);
         resetJadwalFields();
         setJadwalAwal(null, null, null);
-        if(jComboBoxGENRE.getItemCount() > 0) jComboBoxGENRE.setSelectedIndex(0);
+        jComboBoxGENRE.setSelectedIndex(-1);
+        updateFilmActionButtons(false);
     }
 
     private void tambahFilm() {
@@ -965,6 +1006,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
     private javax.swing.JButton jButton5;
     private javax.swing.JButton jButton7;
     private javax.swing.JButton jButton8;
+    private javax.swing.JButton jButton9;
     private javax.swing.JComboBox<String> jComboBoxGENRE;
     private javax.swing.JComboBox<String> jComboBoxstudio;
     private javax.swing.JLabel jLabel1;

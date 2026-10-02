@@ -76,38 +76,14 @@ public class FormFilmAdmin extends javax.swing.JFrame {
 
         jButtonUploadPoster.addActionListener(e -> pilihDanUploadPoster());
 
+        jTable1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jTable1.getSelectionModel().addListSelectionListener(event -> {
-            if (!event.getValueIsAdjusting()) {
-                int row = jTable1.getSelectedRow();
-                if (row == -1) {
-                    jTextFieldID.setText("");
-                    setJadwalAwal(null, null, null);
-                    updateFilmActionButtons(false);
-                    PlaceholderSupport.reset(jTextFieldURLPoster);
-                    return;
-                }
-                jTextFieldID.setText(jTable1.getValueAt(row, 0).toString());
-                PlaceholderSupport.setText(jTextFieldJUDULFILM, jTable1.getValueAt(row, 1).toString());
-                jComboBoxGENRE.setSelectedItem(jTable1.getValueAt(row, 2).toString());
-                PlaceholderSupport.setText(jTextFieldTAHUN, jTable1.getValueAt(row, 3).toString());
-                PlaceholderSupport.setText(jTextFieldSUTRADARA, jTable1.getValueAt(row, 4).toString());
-                PlaceholderSupport.setText(jTextFieldDURASI, jTable1.getValueAt(row, 5).toString());
-                PlaceholderSupport.setText(jTextFieldRATING, jTable1.getValueAt(row, 6).toString());
-                Object posterVal = jTable1.getColumnCount() > 7 ? jTable1.getValueAt(row, 7) : null;
-                PlaceholderSupport.setText(jTextFieldURLPoster, posterVal != null ? posterVal.toString() : "");
-                muatJadwalFilm(Integer.parseInt(jTextFieldID.getText()));
-                updateFilmActionButtons(true);
+            if (event.getValueIsAdjusting()) {
+                return;
             }
+            tampilkanDataFilmTerpilih();
         });
-        jTable1.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent event) {
-                int row = jTable1.rowAtPoint(event.getPoint());
-                if (row >= 0 && jTable1.isRowSelected(row)) {
-                    javax.swing.SwingUtilities.invokeLater(jTable1::clearSelection);
-                }
-            }
-        });
+
         AdminMenuBar.buat(this);
         pack();
         setLocationRelativeTo(null);
@@ -122,6 +98,42 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         jButton3.setEnabled(adaPilihan);
         jButton4.setVisible(adaPilihan);
         jButton4.setEnabled(adaPilihan);
+    }
+
+    private void tampilkanDataFilmTerpilih() {
+        int viewRow = jTable1.getSelectedRow();
+        if (viewRow == -1) {
+            jTextFieldID.setText("");
+            setJadwalAwal(null, null, null);
+            updateFilmActionButtons(false);
+            PlaceholderSupport.reset(jTextFieldURLPoster);
+            return;
+        }
+
+        int modelRow = jTable1.convertRowIndexToModel(viewRow);
+        DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+
+        jTextFieldID.setText(String.valueOf(model.getValueAt(modelRow, 0)));
+        PlaceholderSupport.setText(jTextFieldJUDULFILM, String.valueOf(model.getValueAt(modelRow, 1)));
+        jComboBoxGENRE.setSelectedItem(model.getValueAt(modelRow, 2));
+        PlaceholderSupport.setText(jTextFieldTAHUN, String.valueOf(model.getValueAt(modelRow, 3)));
+        PlaceholderSupport.setText(jTextFieldSUTRADARA, String.valueOf(model.getValueAt(modelRow, 4)));
+        PlaceholderSupport.setText(jTextFieldDURASI, String.valueOf(model.getValueAt(modelRow, 5)));
+        PlaceholderSupport.setText(jTextFieldRATING, String.valueOf(model.getValueAt(modelRow, 6)));
+        Object posterVal = model.getColumnCount() > 7 ? model.getValueAt(modelRow, 7) : null;
+        PlaceholderSupport.setText(jTextFieldURLPoster, posterVal != null ? posterVal.toString() : "");
+
+        int idFilm;
+        try {
+            idFilm = Integer.parseInt(jTextFieldID.getText());
+        } catch (NumberFormatException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "ID film dari tabel tidak valid.", ex);
+            updateFilmActionButtons(false);
+            return;
+        }
+
+        muatJadwalFilm(idFilm);
+        updateFilmActionButtons(true);
     }
 
     private void loadComboStudio() {
@@ -814,7 +826,8 @@ public class FormFilmAdmin extends javax.swing.JFrame {
                     .equals(input.jamTayang());
             boolean hargaSama = grupLama.stream()
                     .allMatch(item -> item.hargaTiket().compareTo(input.hargaTiket()) == 0);
-            if (targetSamaDenganLama && jamSama && hargaSama) {
+            boolean adaPerubahanJadwal = !targetSamaDenganLama || !jamSama || !hargaSama;
+            if (!adaPerubahanJadwal) {
                 return;
             }
             throw new SQLException("Jadwal yang sudah memiliki tiket tidak dapat diubah atau dihapus.");

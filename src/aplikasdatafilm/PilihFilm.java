@@ -183,6 +183,10 @@ public class PilihFilm extends javax.swing.JFrame {
         String kataKunci = PlaceholderSupport.getText(jTextField2).trim();
         boolean isSearch = !kataKunci.isEmpty();
 
+        for (JPanel card : panelCards) {
+            card.setVisible(false);
+        }
+
         try {
             daftarJadwal.clear();
             List<PemesananService.Jadwal> hasilDb = PemesananService.cariJadwal(kataKunci);
@@ -200,6 +204,7 @@ public class PilihFilm extends javax.swing.JFrame {
 
             for (int index = 0; index < 5; index++) {
                 boolean tersedia = index < daftarJadwal.size();
+                panelCards[index].setVisible(tersedia);
                 if (tersedia) {
                     PemesananService.Jadwal jadwal = daftarJadwal.get(index);
                     labelPoster[index].setText("");
@@ -233,6 +238,8 @@ public class PilihFilm extends javax.swing.JFrame {
                         "Pencarian Film",
                         JOptionPane.INFORMATION_MESSAGE);
             }
+            jPanel6.revalidate();
+            jPanel6.repaint();
         } catch (SQLException exception) {
             java.util.logging.Logger.getLogger(PilihFilm.class.getName()).log(
                     java.util.logging.Level.SEVERE, "Gagal memuat jadwal tayang", exception);
@@ -275,7 +282,8 @@ public class PilihFilm extends javax.swing.JFrame {
         if (posisi < 0 || posisi >= daftarJadwal.size()) {
             return;
         }
-        new BeliTiket(idPengguna, daftarJadwal.get(posisi)).setVisible(true);
+        setVisible(false);
+        new BeliTiket(idPengguna, daftarJadwal.get(posisi), this).setVisible(true);
     }
 
     /**

@@ -71,32 +71,12 @@ public class StrukFilm extends javax.swing.JFrame {
     }
 
     private void cetakStruk() {
-        java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
-        job.setJobName("Struk Pemesanan " + idPemesanan);
-        job.setPrintable((graphics, pageFormat, pageIndex) -> {
-            if (pageIndex > 0) {
-                return java.awt.print.Printable.NO_SUCH_PAGE;
-            }
-            java.awt.Graphics2D graphics2D = (java.awt.Graphics2D) graphics.create();
-            double scale = Math.min(pageFormat.getImageableWidth() / jPanel1.getWidth(),
-                    pageFormat.getImageableHeight() / jPanel1.getHeight());
-            graphics2D.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-            graphics2D.scale(scale, scale);
-            jPanel1.printAll(graphics2D);
-            graphics2D.dispose();
-            return java.awt.print.Printable.PAGE_EXISTS;
-        });
-        if (!job.printDialog()) {
+        if (idPemesanan <= 0) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Tidak ada data pemesanan yang bisa dicetak.");
             return;
         }
-        try {
-            job.print();
-        } catch (java.awt.print.PrinterException exception) {
-            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(
-                    java.util.logging.Level.SEVERE, "Gagal mencetak struk", exception);
-            JOptionPane.showMessageDialog(this, "Struk gagal dicetak: " + exception.getMessage(),
-                    "Kesalahan cetak", JOptionPane.ERROR_MESSAGE);
-        }
+        CetakStruk.cetak(idPemesanan);
     }
 
     /**

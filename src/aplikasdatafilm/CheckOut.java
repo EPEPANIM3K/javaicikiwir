@@ -3,33 +3,71 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package aplikasdatafilm;
+
+import java.awt.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import javax.swing.ButtonGroup;
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
 /**
+ * Halaman checkout pembelian tiket film.
  *
  * @author ASUS
  */
 public class CheckOut extends javax.swing.JFrame {
 
+    // ── Data ────────────────────────────────────────────────────────────────
     private long idPengguna;
     private PemesananService.Jadwal jadwal;
     private List<PemesananService.Kursi> kursi;
-    private BigDecimal subtotal = BigDecimal.ZERO;
-    private BigDecimal biayaLayanan = BigDecimal.ZERO;
-    private final java.text.NumberFormat formatRupiah = java.text.NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
-    private final DateTimeFormatter formatTanggal = DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
-    private final DateTimeFormatter formatJam = DateTimeFormatter.ofPattern("HH:mm");
 
-    /**
-     * Creates new form Login
-     */
+    private BigDecimal subtotal = BigDecimal.ZERO;
+    // Biaya layanan dihapus sesuai desain baru (total = subtotal saja)
+
+    private final DateTimeFormatter fmtTgl =
+            DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
+    private final DateTimeFormatter fmtJam =
+            DateTimeFormatter.ofPattern("HH:mm");
+
+    // ── UI Components ────────────────────────────────────────────────────────
+    // Panel kiri (orange)
+    private JPanel panelKiri;
+    private JLabel lblPoster;
+    private JLabel lblJudul;
+    private JLabel lblTanggal;
+    private JLabel lblJam;
+    private JLabel lblDurasi;
+    private JLabel lblKursi;
+    private JLabel lblStudio;
+
+    // Panel kanan
+    private JPanel panelKanan;
+    private JPanel panelDetailPembelian;
+    private JLabel lblDetailPembelianJudul;
+    private JLabel lblHargaTiketKey;
+    private JLabel lblHargaTiketVal;
+    private JLabel lblSubtotalKey;
+    private JLabel lblSubtotalVal;
+    private JLabel lblTotalKey;
+    private JLabel lblTotalVal;
+
+    // Metode pembayaran
+    private JLabel lblMetodePembayaran;
+    private JRadioButton rbCash;
+    private JRadioButton rbQris;
+    private JRadioButton rbTransfer;
+    private ButtonGroup bgMetode;
+
+    // Tombol
+    private JButton btnBayar;
+
+    // ── Konstruktor ──────────────────────────────────────────────────────────
     public CheckOut() {
         this(0, null, List.of());
     }
@@ -38,280 +76,300 @@ public class CheckOut extends javax.swing.JFrame {
             List<PemesananService.Kursi> kursi) {
         this.idPengguna = idPengguna;
         this.jadwal = jadwal;
-        this.kursi = List.copyOf(kursi);
+        this.kursi = kursi == null ? List.of() : List.copyOf(kursi);
+
         initComponents();
+        setTitle("TIKET KU – Checkout");
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        ButtonGroup metodePembayaran = new ButtonGroup();
-        metodePembayaran.add(jRadioButton1);
-        metodePembayaran.add(jRadioButton2);
-        metodePembayaran.add(jRadioButton3);
-        tampilkanRingkasan();
-        jButton1.addActionListener(event -> simpanPemesanan());
+        setMinimumSize(new Dimension(760, 620));
+        pack();
+        setSize(760, 620);
+        setLocationRelativeTo(null);
+
+        isiData();
         UserMenuBar.buat(this, idPengguna);
     }
 
-    private void tampilkanRingkasan() {
-        if (jadwal == null || kursi.isEmpty()) {
-            return;
-        }
-        subtotal = jadwal.hargaTiket().multiply(BigDecimal.valueOf(kursi.size()));
-        biayaLayanan = subtotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
-        jLabel3.setText("Film: " + jadwal.judul());
-        jLabel4.setText("Tanggal: " + formatTanggal.format(jadwal.mulaiTayang()));
-        jLabel7.setText("Jam: " + formatJam.format(jadwal.mulaiTayang())
-                + " / " + jadwal.durasiMenit() + " menit");
-        jLabel10.setText("Kursi: " + String.join(", ", kursi.stream()
-                .map(PemesananService.Kursi::kodeKursi).sorted().toList()));
-        jLabel11.setText("Studio: " + jadwal.namaStudio());
-        jLabel19.setText(kursi.size() + " x " + formatRupiah.format(jadwal.hargaTiket()));
-        jLabel18.setText(formatRupiah.format(subtotal));
-        jLabel20.setText(formatRupiah.format(biayaLayanan));
-        jLabel21.setText(formatRupiah.format(subtotal.add(biayaLayanan)));
+    // ── Format Rupiah ────────────────────────────────────────────────────────
+    private String formatRp(BigDecimal nilai) {
+        DecimalFormatSymbols sym = new DecimalFormatSymbols(new Locale("id", "ID"));
+        sym.setGroupingSeparator('.');
+        DecimalFormat df = new DecimalFormat("#,###", sym);
+        return "Rp" + df.format(nilai);
     }
 
+    // ── Isi data dari jadwal & kursi ─────────────────────────────────────────
+    private void isiData() {
+        if (jadwal == null || kursi.isEmpty()) return;
+
+        subtotal = jadwal.hargaTiket().multiply(BigDecimal.valueOf(kursi.size()));
+
+        // Detail Film
+        lblJudul.setText("\uD83C\uDFAC " + jadwal.judul());
+        lblTanggal.setText("\uD83D\uDCC5 " + fmtTgl.format(jadwal.mulaiTayang()));
+
+        int jam  = jadwal.durasiMenit() / 60;
+        int mnt  = jadwal.durasiMenit() % 60;
+        String durStr = jam > 0
+                ? (jam + " Jam" + (mnt > 0 ? " " + mnt + " Menit" : ""))
+                : (mnt + " Menit");
+
+        lblJam.setText("\uD83D\uDD50 " + fmtJam.format(jadwal.mulaiTayang())
+                + " / " + durStr);
+        lblDurasi.setText("\u23F3 Durasi : " + durStr);
+        lblStudio.setText("\uD83C\uDFA5 " + jadwal.namaStudio());
+
+        String kodeKursi = String.join(", ", kursi.stream()
+                .map(PemesananService.Kursi::kodeKursi).sorted().toList());
+        lblKursi.setText("\uD83D\uDCBA Kursi: " + kodeKursi);
+
+        // Detail Pembelian
+        lblHargaTiketVal.setText(kursi.size() + " \u00d7 " + formatRp(jadwal.hargaTiket()));
+        lblSubtotalVal.setText(formatRp(subtotal));
+        lblTotalVal.setText(formatRp(subtotal));
+
+        // Muat poster
+        if (jadwal.urlPoster() != null && !jadwal.urlPoster().isBlank()) {
+            PosterFetcher.muat(lblPoster, jadwal.urlPoster(), 180, 240);
+        }
+    }
+
+    // ── Simpan Pemesanan ─────────────────────────────────────────────────────
     private void simpanPemesanan() {
         if (idPengguna <= 0 || jadwal == null || kursi.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Data pemesanan tidak lengkap. Silakan pilih film dan kursi lagi.");
+            JOptionPane.showMessageDialog(this,
+                    "Data pemesanan tidak lengkap. Silakan pilih film dan kursi lagi.");
             return;
         }
         String metode;
-        if (jRadioButton1.isSelected()) {
-            metode = "CASH";
-        } else if (jRadioButton2.isSelected()) {
-            metode = "QRIS";
-        } else if (jRadioButton3.isSelected()) {
-            metode = "TRANSFER_BANK";
-        } else {
-            JOptionPane.showMessageDialog(this, "Pilih metode pembayaran terlebih dahulu.");
+        if (rbCash.isSelected())         metode = "CASH";
+        else if (rbQris.isSelected())     metode = "QRIS";
+        else if (rbTransfer.isSelected()) metode = "TRANSFER_BANK";
+        else {
+            JOptionPane.showMessageDialog(this,
+                    "Pilih metode pembayaran terlebih dahulu.");
             return;
         }
 
-        jButton1.setEnabled(false);
+        btnBayar.setEnabled(false);
         try {
-            long idPemesanan = PemesananService.buatPemesanan(idPengguna, jadwal.idJadwal(),
-                    kursi.stream().map(PemesananService.Kursi::idKursi).toList(), metode);
-            JOptionPane.showMessageDialog(this,
-                    "Pemesanan tersimpan dengan status PENDING. Pembayaran akan diverifikasi sesuai metode yang dipilih.");
+            long idPemesanan = PemesananService.buatPemesanan(
+                    idPengguna,
+                    jadwal.idJadwal(),
+                    kursi.stream().map(PemesananService.Kursi::idKursi).toList(),
+                    metode);
             dispose();
             new StrukFilm(idPemesanan, idPengguna).setVisible(true);
-        } catch (SQLException exception) {
-            java.util.logging.Logger.getLogger(CheckOut.class.getName()).log(
-                    java.util.logging.Level.SEVERE, "Pemesanan gagal disimpan", exception);
+        } catch (SQLException ex) {
+            java.util.logging.Logger.getLogger(CheckOut.class.getName())
+                    .log(java.util.logging.Level.SEVERE, "Pemesanan gagal", ex);
             JOptionPane.showMessageDialog(this,
-                    "Pemesanan gagal disimpan. " + exception.getMessage(), "Kesalahan pemesanan",
-                    JOptionPane.ERROR_MESSAGE);
-            jButton1.setEnabled(true);
+                    "Pemesanan gagal disimpan.\n" + ex.getMessage(),
+                    "Kesalahan Pemesanan", JOptionPane.ERROR_MESSAGE);
+            btnBayar.setEnabled(true);
         }
     }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
+    // ── Build UI (menggantikan initComponents yang digenerate NetBeans) ───────
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        jLabel7 = new javax.swing.JLabel();
-        jLabel10 = new javax.swing.JLabel();
-        jLabel11 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
-        jLabel13 = new javax.swing.JLabel();
-        jLabel14 = new javax.swing.JLabel();
-        jLabel15 = new javax.swing.JLabel();
-        jLabel17 = new javax.swing.JLabel();
-        jLabel18 = new javax.swing.JLabel();
-        jLabel19 = new javax.swing.JLabel();
-        jLabel16 = new javax.swing.JLabel();
-        jLabel20 = new javax.swing.JLabel();
-        jLabel21 = new javax.swing.JLabel();
-        jLabel22 = new javax.swing.JLabel();
-        jRadioButton1 = new javax.swing.JRadioButton();
-        jRadioButton2 = new javax.swing.JRadioButton();
-        jRadioButton3 = new javax.swing.JRadioButton();
+        // ── Warna ───────────────────────────────────────────────────────────
+        Color ORANGE     = new Color(0xF5A623);
+        Color DARK_PANEL = new Color(0x2D343A);  // tidak dipakai di sini
+        Color WHITE      = Color.WHITE;
+        Color BG         = new Color(0xF0F0F0);
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        Font fontBold14 = new Font("Segoe UI", Font.BOLD, 14);
+        Font fontBold12 = new Font("Segoe UI", Font.BOLD, 12);
+        Font fontPlain12 = new Font("Segoe UI", Font.PLAIN, 12);
+        Font fontBold18 = new Font("Segoe UI", Font.BOLD, 18);
+        Font fontTitle  = new Font("Segoe UI", Font.BOLD, 22);
 
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setText(" TIKET KU");
+        getContentPane().setBackground(BG);
+        getContentPane().setLayout(new BorderLayout());
 
-        jLabel2.setText("CHECK OUT");
+        // ── Header ─────────────────────────────────────────────────────────
+        JPanel panelHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 14));
+        panelHeader.setBackground(BG);
+        JLabel lblTitle = new JLabel("TIKET KU");
+        lblTitle.setFont(fontTitle);
+        panelHeader.add(lblTitle);
+        getContentPane().add(panelHeader, BorderLayout.NORTH);
 
-        jLabel3.setText("🎬 Titanic");
+        // ── Tengah: kiri + kanan ───────────────────────────────────────────
+        JPanel panelTengah = new JPanel(new BorderLayout(20, 0));
+        panelTengah.setBackground(BG);
+        panelTengah.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
+        getContentPane().add(panelTengah, BorderLayout.CENTER);
 
-        jLabel4.setText("📅 25 September 2026 ");
+        // ── PANEL KIRI (ORANGE) ────────────────────────────────────────────
+        panelKiri = new JPanel();
+        panelKiri.setBackground(ORANGE);
+        panelKiri.setLayout(new BorderLayout());
+        panelKiri.setPreferredSize(new Dimension(240, 460));
 
-        jLabel6.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jLabel6.setText("DETAIL FILM");
+        // Poster di bagian atas panel orange
+        lblPoster = new JLabel("POSTER FILM", SwingConstants.CENTER);
+        lblPoster.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblPoster.setForeground(WHITE);
+        lblPoster.setOpaque(false);
+        lblPoster.setPreferredSize(new Dimension(220, 250));
+        lblPoster.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        jLabel7.setText("🕐 18:00 / 3 Jam");
+        // Info film di bawah poster
+        JPanel panelInfoFilm = new JPanel();
+        panelInfoFilm.setOpaque(false);
+        panelInfoFilm.setLayout(new BoxLayout(panelInfoFilm, BoxLayout.Y_AXIS));
+        panelInfoFilm.setBorder(BorderFactory.createEmptyBorder(10, 14, 14, 10));
 
-        jLabel10.setText("💺 Kursi: A5, A6 ");
+        lblJudul   = buatLabelInfo(WHITE, fontBold14, "\uD83C\uDFAC Film");
+        lblTanggal = buatLabelInfo(WHITE, fontPlain12, "\uD83D\uDCC5 Tanggal");
+        lblJam     = buatLabelInfo(WHITE, fontPlain12, "\uD83D\uDD50 Jam");
+        lblDurasi  = buatLabelInfo(WHITE, fontPlain12, "\u23F3 Durasi");
+        lblKursi   = buatLabelInfo(WHITE, fontPlain12, "\uD83D\uDCBA Kursi");
+        lblStudio  = buatLabelInfo(WHITE, fontPlain12, "\uD83C\uDFA5 Studio");
 
-        jLabel11.setText("🎥 Studio 2");
+        for (JLabel lbl : new JLabel[]{lblJudul, lblTanggal, lblJam, lblDurasi, lblKursi, lblStudio}) {
+            panelInfoFilm.add(lbl);
+            panelInfoFilm.add(Box.createVerticalStrut(6));
+        }
 
-        jButton1.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jButton1.setText("BAYAR SEKARANG");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
-            }
-        });
+        panelKiri.add(lblPoster, BorderLayout.NORTH);
+        panelKiri.add(panelInfoFilm, BorderLayout.CENTER);
 
-        jLabel13.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jLabel13.setText("DETAIL PEMBELIAN");
+        panelTengah.add(panelKiri, BorderLayout.WEST);
 
-        jLabel14.setText("Harga tiket :");
+        // ── PANEL KANAN ────────────────────────────────────────────────────
+        panelKanan = new JPanel();
+        panelKanan.setBackground(BG);
+        panelKanan.setLayout(new BoxLayout(panelKanan, BoxLayout.Y_AXIS));
+        panelKanan.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
 
-        jLabel15.setText("Subtotal :");
+        // -- Detail Pembelian (kotak merah) --
+        panelDetailPembelian = new JPanel();
+        panelDetailPembelian.setBackground(new Color(0xDC3545));
+        panelDetailPembelian.setLayout(new GridBagLayout());
+        panelDetailPembelian.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        panelDetailPembelian.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
 
-        jLabel17.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jLabel17.setText("TOTAL :");
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.insets = new Insets(4, 4, 4, 4);
+        gc.anchor = GridBagConstraints.WEST;
 
-        jLabel18.setText("Rp160.000");
+        lblDetailPembelianJudul = new JLabel("DETAIL PEMBELIAN");
+        lblDetailPembelianJudul.setFont(fontBold12);
+        lblDetailPembelianJudul.setForeground(WHITE);
+        gc.gridx = 0; gc.gridy = 0; gc.gridwidth = 2;
+        panelDetailPembelian.add(lblDetailPembelianJudul, gc);
+        gc.gridwidth = 1;
 
-        jLabel19.setText("  4 × Rp40.000");
+        // Harga tiket
+        lblHargaTiketKey = new JLabel("Harga tiket :");
+        lblHargaTiketKey.setForeground(WHITE);
+        lblHargaTiketKey.setFont(fontPlain12);
+        gc.gridx = 0; gc.gridy = 1;
+        panelDetailPembelian.add(lblHargaTiketKey, gc);
 
-        jLabel16.setText("Biaya Layanan :");
+        lblHargaTiketVal = new JLabel("-");
+        lblHargaTiketVal.setForeground(WHITE);
+        lblHargaTiketVal.setFont(fontBold12);
+        gc.gridx = 1;
+        panelDetailPembelian.add(lblHargaTiketVal, gc);
 
-        jLabel20.setText("  4 × Rp4.000");
+        // Subtotal
+        lblSubtotalKey = new JLabel("Subtotal :");
+        lblSubtotalKey.setForeground(WHITE);
+        lblSubtotalKey.setFont(fontPlain12);
+        gc.gridx = 0; gc.gridy = 2;
+        panelDetailPembelian.add(lblSubtotalKey, gc);
 
-        jLabel21.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        jLabel21.setText("Rp176.000");
+        lblSubtotalVal = new JLabel("-");
+        lblSubtotalVal.setForeground(WHITE);
+        lblSubtotalVal.setFont(fontBold12);
+        gc.gridx = 1;
+        panelDetailPembelian.add(lblSubtotalVal, gc);
 
-        jLabel22.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jLabel22.setText("METODE PEMBAYARAN :");
+        panelKanan.add(Box.createVerticalStrut(10));
+        panelKanan.add(panelDetailPembelian);
+        panelKanan.add(Box.createVerticalStrut(20));
 
-        jRadioButton1.setText("Cash");
+        // -- Total --
+        JPanel panelTotal = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panelTotal.setBackground(BG);
+        panelTotal.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
-        jRadioButton2.setText("Qris");
+        lblTotalKey = new JLabel("TOTAL :  ");
+        lblTotalKey.setFont(fontBold14);
+        lblTotalVal = new JLabel("-");
+        lblTotalVal.setFont(fontBold18);
 
-        jRadioButton3.setText("Transfer Bank");
+        panelTotal.add(lblTotalKey);
+        panelTotal.add(lblTotalVal);
+        panelKanan.add(panelTotal);
+        panelKanan.add(Box.createVerticalStrut(20));
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(148, 148, 148)
-                .addComponent(jLabel2)
-                .addGap(0, 0, Short.MAX_VALUE))
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel16)
-                            .addComponent(jLabel15)
-                            .addComponent(jLabel14)
-                            .addComponent(jLabel17)
-                            .addComponent(jLabel22))
-                        .addGap(18, 18, 18)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel21)
-                                .addGap(0, 0, Short.MAX_VALUE))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel19)
-                                    .addComponent(jLabel18)
-                                    .addComponent(jLabel20))
-                                .addGap(41, 144, Short.MAX_VALUE))))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jRadioButton1)
-                            .addComponent(jRadioButton2)
-                            .addComponent(jRadioButton3))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jButton1)
-                        .addGap(131, 131, 131))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel6)
-                            .addComponent(jLabel10)
-                            .addComponent(jLabel13)
-                            .addComponent(jLabel1)
-                            .addComponent(jLabel11)
-                            .addComponent(jLabel7)
-                            .addComponent(jLabel4)
-                            .addComponent(jLabel3))
-                        .addContainerGap())))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(26, 26, 26)
-                .addComponent(jLabel1)
-                .addGap(16, 16, 16)
-                .addComponent(jLabel2)
-                .addGap(55, 55, 55)
-                .addComponent(jLabel6)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel3)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel4)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel7)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel11)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel10)
-                .addGap(48, 48, 48)
-                .addComponent(jLabel13)
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel14)
-                    .addComponent(jLabel19))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel15)
-                    .addComponent(jLabel18))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel20)
-                    .addComponent(jLabel16))
-                .addGap(60, 60, 60)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel17)
-                    .addComponent(jLabel21))
-                .addGap(60, 60, 60)
-                .addComponent(jLabel22)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jRadioButton1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jRadioButton2)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jRadioButton3)
-                .addGap(68, 68, 68)
-                .addComponent(jButton1)
-                .addContainerGap(41, Short.MAX_VALUE))
-        );
+        // -- Metode Pembayaran --
+        JPanel panelMetode = new JPanel();
+        panelMetode.setBackground(BG);
+        panelMetode.setLayout(new BoxLayout(panelMetode, BoxLayout.Y_AXIS));
+        panelMetode.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
+        lblMetodePembayaran = new JLabel("METODE PEMBAYARAN :");
+        lblMetodePembayaran.setFont(fontBold12);
+        lblMetodePembayaran.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelMetode.add(lblMetodePembayaran);
+        panelMetode.add(Box.createVerticalStrut(8));
 
-        pack();
+        rbCash     = new JRadioButton("Cash");
+        rbQris     = new JRadioButton("Qris");
+        rbTransfer = new JRadioButton("Transfer Bank");
+        for (JRadioButton rb : new JRadioButton[]{rbCash, rbQris, rbTransfer}) {
+            rb.setBackground(BG);
+            rb.setFont(fontPlain12);
+            rb.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panelMetode.add(rb);
+            panelMetode.add(Box.createVerticalStrut(4));
+        }
+
+        bgMetode = new ButtonGroup();
+        bgMetode.add(rbCash);
+        bgMetode.add(rbQris);
+        bgMetode.add(rbTransfer);
+
+        panelKanan.add(panelMetode);
+        panelKanan.add(Box.createVerticalStrut(20));
+
+        // -- Tombol BAYAR SEKARANG --
+        btnBayar = new JButton("BAYAR SEKARANG");
+        btnBayar.setFont(fontBold12);
+        btnBayar.setBackground(new Color(0x343A40));
+        btnBayar.setForeground(WHITE);
+        btnBayar.setFocusPainted(false);
+        btnBayar.setOpaque(true);
+        btnBayar.setBorderPainted(false);
+        btnBayar.setPreferredSize(new Dimension(180, 36));
+        btnBayar.setMaximumSize(new Dimension(200, 36));
+        btnBayar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnBayar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnBayar.addActionListener(e -> simpanPemesanan());
+        panelKanan.add(btnBayar);
+
+        panelTengah.add(panelKanan, BorderLayout.CENTER);
+
+        // ── Bottom margin ──────────────────────────────────────────────────
+        getContentPane().add(Box.createVerticalStrut(20), BorderLayout.SOUTH);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
+    /** Helper buat label info di panel orange. */
+    private JLabel buatLabelInfo(Color fg, Font font, String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setForeground(fg);
+        lbl.setFont(font);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return lbl;
+    }
 
     /**
      * @param args the command line arguments
@@ -320,7 +378,7 @@ public class CheckOut extends javax.swing.JFrame {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
@@ -339,45 +397,12 @@ public class CheckOut extends javax.swing.JFrame {
             java.util.logging.Logger.getLogger(CheckOut.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new CheckOut().setVisible(true);
-            }
-        });
+        java.awt.EventQueue.invokeLater(() -> new CheckOut().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
-    private javax.swing.JLabel jLabel11;
-    private javax.swing.JLabel jLabel13;
-    private javax.swing.JLabel jLabel14;
-    private javax.swing.JLabel jLabel15;
-    private javax.swing.JLabel jLabel16;
-    private javax.swing.JLabel jLabel17;
-    private javax.swing.JLabel jLabel18;
-    private javax.swing.JLabel jLabel19;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel20;
-    private javax.swing.JLabel jLabel21;
-    private javax.swing.JLabel jLabel22;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JRadioButton jRadioButton1;
-    private javax.swing.JRadioButton jRadioButton2;
-    private javax.swing.JRadioButton jRadioButton3;
+    // (all variables are declared as fields above — no GEN-BEGIN block needed)
     // End of variables declaration//GEN-END:variables
 }

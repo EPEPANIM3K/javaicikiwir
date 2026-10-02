@@ -1,25 +1,12 @@
-
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.*;
 
 public class DbInspector {
-    public static void main(String[] args) {
-        String URL = "jdbc:mysql://localhost:3306/data_film";
-        String USER = "root";
-        String PASSWORD = "";
-
-        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD)) {
-            DatabaseMetaData metaData = conn.getMetaData();
-            ResultSet fks = metaData.getImportedKeys(null, null, "film");
-            while (fks.next()) {
-                System.out.println("film FK: " + fks.getString("FKCOLUMN_NAME") + " references " + fks.getString("PKTABLE_NAME") + "." + fks.getString("PKCOLUMN_NAME"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public static void main(String[] args) throws Exception {
+        var list = aplikasdatafilm.PemesananService.cariJadwal("");
+        System.out.println("Total jadwal: " + list.size());
+        for (var j : list) {
+            System.out.println(j.idFilm() + ": " + j.judul() + " | " + j.genre() + " | " + j.mulaiTayang() + " | " + j.hargaTiket() + " | poster: " + j.urlPoster());
         }
     }
 }
-

@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 /**
  * Halaman checkout pembelian tiket film.
@@ -87,7 +88,7 @@ public class CheckOut extends javax.swing.JFrame {
         setLocationRelativeTo(null);
 
         isiData();
-        UserMenuBar.buat(this, idPengguna);
+        //UserMenuBar.buat(this, idPengguna);
     }
 
     // ── Format Rupiah ────────────────────────────────────────────────────────
@@ -176,10 +177,11 @@ public class CheckOut extends javax.swing.JFrame {
     private void initComponents() {
 
         // ── Warna ───────────────────────────────────────────────────────────
-        Color ORANGE     = new Color(0xF5A623);
-        Color DARK_PANEL = new Color(0x2D343A);  // tidak dipakai di sini
-        Color WHITE      = Color.WHITE;
-        Color BG         = new Color(0xF0F0F0);
+        final Color BURGUNDY = new Color(0x6D1F2B);
+        final Color CREME = new Color(0xF5EDE5);
+        final Color DEEP_CHARCOAL = new Color(0x171416);
+        final Color WHITE = CREME;
+        final Color BG = DEEP_CHARCOAL;
 
         Font fontBold14 = new Font("Segoe UI", Font.BOLD, 14);
         Font fontBold12 = new Font("Segoe UI", Font.BOLD, 12);
@@ -204,9 +206,9 @@ public class CheckOut extends javax.swing.JFrame {
         panelTengah.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
         getContentPane().add(panelTengah, BorderLayout.CENTER);
 
-        // ── PANEL KIRI (ORANGE) ────────────────────────────────────────────
+        // ── PANEL KIRI (BURGUNDY) ────────────────────────────────────────────
         panelKiri = new JPanel();
-        panelKiri.setBackground(ORANGE);
+        panelKiri.setBackground(BURGUNDY);
         panelKiri.setLayout(new BorderLayout());
         panelKiri.setPreferredSize(new Dimension(240, 460));
 
@@ -247,9 +249,9 @@ public class CheckOut extends javax.swing.JFrame {
         panelKanan.setLayout(new BoxLayout(panelKanan, BoxLayout.Y_AXIS));
         panelKanan.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
 
-        // -- Detail Pembelian (kotak merah) --
+        // -- Detail Pembelian (kotak burgundy) --
         panelDetailPembelian = new JPanel();
-        panelDetailPembelian.setBackground(new Color(0xDC3545));
+        panelDetailPembelian.setBackground(BURGUNDY);
         panelDetailPembelian.setLayout(new GridBagLayout());
         panelDetailPembelian.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
         panelDetailPembelian.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
@@ -295,15 +297,17 @@ public class CheckOut extends javax.swing.JFrame {
         panelKanan.add(panelDetailPembelian);
         panelKanan.add(Box.createVerticalStrut(20));
 
-        // -- Total --
+// -- Total --
         JPanel panelTotal = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panelTotal.setBackground(BG);
         panelTotal.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
-        lblTotalKey = new JLabel("TOTAL :  ");
+        lblTotalKey = new JLabel("total :  ");
         lblTotalKey.setFont(fontBold14);
+        lblTotalKey.setForeground(CREME);
         lblTotalVal = new JLabel("-");
         lblTotalVal.setFont(fontBold18);
+        lblTotalVal.setForeground(CREME);
 
         panelTotal.add(lblTotalKey);
         panelTotal.add(lblTotalVal);
@@ -318,6 +322,7 @@ public class CheckOut extends javax.swing.JFrame {
 
         lblMetodePembayaran = new JLabel("METODE PEMBAYARAN :");
         lblMetodePembayaran.setFont(fontBold12);
+        lblMetodePembayaran.setForeground(CREME);
         lblMetodePembayaran.setAlignmentX(Component.LEFT_ALIGNMENT);
         panelMetode.add(lblMetodePembayaran);
         panelMetode.add(Box.createVerticalStrut(8));
@@ -327,6 +332,7 @@ public class CheckOut extends javax.swing.JFrame {
         rbTransfer = new JRadioButton("Transfer Bank");
         for (JRadioButton rb : new JRadioButton[]{rbCash, rbQris, rbTransfer}) {
             rb.setBackground(BG);
+            rb.setForeground(CREME);
             rb.setFont(fontPlain12);
             rb.setAlignmentX(Component.LEFT_ALIGNMENT);
             panelMetode.add(rb);
@@ -343,14 +349,19 @@ public class CheckOut extends javax.swing.JFrame {
 
         // -- Tombol BAYAR SEKARANG --
         btnBayar = new JButton("BAYAR SEKARANG");
+        btnBayar.setUI(new BasicButtonUI());
         btnBayar.setFont(fontBold12);
-        btnBayar.setBackground(new Color(0x343A40));
-        btnBayar.setForeground(WHITE);
-        btnBayar.setFocusPainted(false);
+        btnBayar.setBackground(BURGUNDY);
+        btnBayar.setForeground(CREME);
         btnBayar.setOpaque(true);
-        btnBayar.setBorderPainted(false);
-        btnBayar.setPreferredSize(new Dimension(180, 36));
-        btnBayar.setMaximumSize(new Dimension(200, 36));
+        btnBayar.setContentAreaFilled(true);
+        btnBayar.setBorderPainted(true);
+        btnBayar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BURGUNDY.darker()),
+                BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+        btnBayar.setFocusPainted(false);
+        btnBayar.setRolloverEnabled(false);
+        ButtonSizingHelper.setSizeCustom(btnBayar, 140, 36, 16, 6);
         btnBayar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBayar.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnBayar.addActionListener(e -> simpanPemesanan());

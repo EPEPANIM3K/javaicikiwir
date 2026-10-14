@@ -9,6 +9,7 @@ import javax.swing.JTextField;
 public final class PlaceholderSupport {
 
     private static final String PLACEHOLDER_KEY = PlaceholderSupport.class.getName() + ".placeholder";
+    private static final String SHOWING_PLACEHOLDER_KEY = PlaceholderSupport.class.getName() + ".showingPlaceholder";
     private static final String NORMAL_COLOR_KEY = PlaceholderSupport.class.getName() + ".normalColor";
     private static final String PLACEHOLDER_COLOR_KEY = PlaceholderSupport.class.getName() + ".placeholderColor";
     private static final String PASSWORD_ECHO_KEY = PlaceholderSupport.class.getName() + ".passwordEcho";
@@ -26,6 +27,7 @@ public final class PlaceholderSupport {
             public void focusGained(FocusEvent event) {
                 if (isShowing(field)) {
                     field.setText("");
+                    field.putClientProperty(SHOWING_PLACEHOLDER_KEY, Boolean.FALSE);
                     field.setForeground(normalColor);
                 }
             }
@@ -50,6 +52,7 @@ public final class PlaceholderSupport {
             public void focusGained(FocusEvent event) {
                 if (isShowing(field)) {
                     field.setText("");
+                    field.putClientProperty(SHOWING_PLACEHOLDER_KEY, Boolean.FALSE);
                     field.setForeground(normalColor);
                     field.setEchoChar(echoCharacter);
                 }
@@ -73,6 +76,7 @@ public final class PlaceholderSupport {
     }
 
     public static void setText(JTextField field, String value) {
+        field.putClientProperty(SHOWING_PLACEHOLDER_KEY, Boolean.FALSE);
         field.setForeground(normalColor(field));
         field.setText(value);
     }
@@ -93,9 +97,8 @@ public final class PlaceholderSupport {
 
     private static boolean isShowing(JTextField field) {
         Object placeholder = field.getClientProperty(PLACEHOLDER_KEY);
-        Object placeholderColor = field.getClientProperty(PLACEHOLDER_COLOR_KEY);
-        return placeholder instanceof String && placeholder.equals(field.getText())
-                && placeholderColor instanceof Color && placeholderColor.equals(field.getForeground());
+        return Boolean.TRUE.equals(field.getClientProperty(SHOWING_PLACEHOLDER_KEY))
+            && placeholder instanceof String && placeholder.equals(field.getText());
     }
 
     private static Color normalColor(JTextField field) {
@@ -106,6 +109,7 @@ public final class PlaceholderSupport {
     private static void showPlaceholder(JTextField field) {
         field.setForeground(PLACEHOLDER_COLOR);
         field.setText((String) field.getClientProperty(PLACEHOLDER_KEY));
+        field.putClientProperty(SHOWING_PLACEHOLDER_KEY, Boolean.TRUE);
         if (field instanceof JPasswordField passwordField) {
             Object echoCharacter = field.getClientProperty(PASSWORD_ECHO_KEY);
             if (echoCharacter instanceof Character character) {

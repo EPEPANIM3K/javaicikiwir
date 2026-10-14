@@ -4,19 +4,94 @@
  */
 package aplikasdatafilm;
 
+import java.awt.Color;
+import java.awt.Cursor;
+import javax.swing.BorderFactory;
+import javax.swing.plaf.basic.BasicButtonUI;
+
 /**
  *
  * @author WINDOWS 11
  */
 public class Menu extends javax.swing.JFrame {
-    
+
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Menu.class.getName());
+    private static final Color BURGUNDY = new Color(0x6D1F2B);
+    private static final Color CREME = new Color(0xF5EDE5);
+    private static final Color DEEP_CHARCOAL = new Color(0x171416);
 
     /**
      * Creates new form Menu
      */
     public Menu() {
         initComponents();
+        applyTheme();
+        setupButtons();
+    }
+
+    private void setupButtons() {
+        // Setup tombol KELUAR (Logout)
+        jButton2.setText("KELUAR");
+        jButton2.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        jButton2.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Hapus action listener lama jika ada
+        for (var listener : jButton2.getActionListeners()) {
+            jButton2.removeActionListener(listener);
+        }
+        jButton2.addActionListener(evt -> keluar());
+
+        // Setup tombol TAMBAH DATA
+        jButton3.setText("TAMBAH DATA");
+        jButton3.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        jButton3.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Hapus action listener lama
+        for (var listener : jButton3.getActionListeners()) {
+            jButton3.removeActionListener(listener);
+        }
+        jButton3.addActionListener(evt -> tambahData());
+
+        // Apply sizing dengan ButtonSizingHelper
+        ButtonSizingHelper.setSizeForButton(jButton2, ButtonSizingHelper.TYPE_ACTION);
+        ButtonSizingHelper.setSizeForButton(jButton3, ButtonSizingHelper.TYPE_ACTION);
+    }
+
+    private void keluar() {
+        // Logout - kembali ke halaman login
+        dispose();
+        new Login().setVisible(true);
+    }
+
+    private void tambahData() {
+        // Buka halaman FormFilmAdmin untuk menambah data
+        new FormFilmAdmin().setVisible(true);
+        dispose();
+    }
+
+    private void applyTheme() {
+        getContentPane().setBackground(DEEP_CHARCOAL);
+
+        for (javax.swing.JButton button : new javax.swing.JButton[]{jButton2, jButton3}) {
+            button.setUI(new BasicButtonUI());
+            button.setBackground(BURGUNDY);
+            button.setForeground(CREME);
+            button.setOpaque(true);
+            button.setContentAreaFilled(true);
+            button.setBorderPainted(true);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BURGUNDY.darker()),
+                    BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+            button.setFocusPainted(false);
+            button.setRolloverEnabled(false);
+            button.setEnabled(true);
+        }
+
+        jTextField1.setBackground(DEEP_CHARCOAL);
+        jTextField1.setForeground(CREME);
+        jTextField1.setCaretColor(CREME);
+        jTextField1.setOpaque(false);
+        jTextField1.setBorder(BorderFactory.createEmptyBorder());
+        jTextField1.setEditable(false);
+        jTextField1.setFocusable(false);
     }
     
 
@@ -29,107 +104,66 @@ public class Menu extends javax.swing.JFrame {
     private void initComponents() {
 
         jMenuItem1 = new javax.swing.JMenuItem();
-        jMenuBarMenu = new javax.swing.JMenuBar();
-        jMenuUser = new javax.swing.JMenu();
-        jMenuItemLogOut = new javax.swing.JMenuItem();
-        jMenuItemKeluar = new javax.swing.JMenuItem();
-        jMenuData = new javax.swing.JMenu();
-        jMenuItemIsiData = new javax.swing.JMenuItem();
+        jButton1 = new javax.swing.JButton();
+        jButton2 = new javax.swing.JButton();
+        jButton3 = new javax.swing.JButton();
+        jTextField1 = new javax.swing.JTextField();
 
         jMenuItem1.setText("jMenuItem1");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        jMenuUser.setText("Admin");
-        jMenuUser.addActionListener(new java.awt.event.ActionListener() {
+        jButton1.setText("jButton1");
+
+        jButton2.setText("Keluar");
+
+        jButton3.setText("Tambah data");
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuUserActionPerformed(evt);
+                jButton3ActionPerformed(evt);
             }
         });
 
-        jMenuItemLogOut.setBackground(new java.awt.Color(102, 0, 51));
-        jMenuItemLogOut.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jMenuItemLogOut.setForeground(new java.awt.Color(153, 0, 51));
-        jMenuItemLogOut.setText("Log Out");
-        jMenuItemLogOut.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItemLogOutActionPerformed(evt);
-            }
-        });
-        jMenuUser.add(jMenuItemLogOut);
-
-        jMenuItemKeluar.setText("Keluar");
-        jMenuItemKeluar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItemKeluarActionPerformed(evt);
-            }
-        });
-        jMenuUser.add(jMenuItemKeluar);
-
-        jMenuBarMenu.add(jMenuUser);
-
-        jMenuData.setText("Data");
-        jMenuData.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuDataActionPerformed(evt);
-            }
-        });
-
-        jMenuItemIsiData.setText("Isi Data Film");
-        jMenuItemIsiData.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItemIsiDataActionPerformed(evt);
-            }
-        });
-        jMenuData.add(jMenuItemIsiData);
-
-        jMenuBarMenu.add(jMenuData);
-
-        setJMenuBar(jMenuBarMenu);
+        jTextField1.setBackground(new java.awt.Color(51, 0, 51));
+        jTextField1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jTextField1.setForeground(new java.awt.Color(255, 255, 255));
+        jTextField1.setText("Halo admin");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 486, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jButton2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton3))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(179, 179, 179)
+                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(194, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 345, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton2)
+                    .addComponent(jButton3))
+                .addGap(133, 133, 133)
+                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(175, Short.MAX_VALUE))
         );
 
         pack();
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jMenuUserActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuUserActionPerformed
-        // TODO add your handling code here: 
-       
-    }//GEN-LAST:event_jMenuUserActionPerformed
-
-    private void jMenuDataActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuDataActionPerformed
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jMenuDataActionPerformed
-
-    private void jMenuItemIsiDataActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItemIsiDataActionPerformed
-        // TODO add your handling code here:
-        dispose();
-        
-        new FormFilmAdmin().setVisible(true);
-    }//GEN-LAST:event_jMenuItemIsiDataActionPerformed
-
-    private void jMenuItemKeluarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItemKeluarActionPerformed
-        // TODO add your handling code here:
-         System.exit(0);
-    }//GEN-LAST:event_jMenuItemKeluarActionPerformed
-
-    private void jMenuItemLogOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItemLogOutActionPerformed
-        // TODO add your handling code here:
-        dispose();
-        
-        new aplikasdatafilm.Login().setVisible(true);
-        
-    }//GEN-LAST:event_jMenuItemLogOutActionPerformed
+    }//GEN-LAST:event_jButton3ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -157,13 +191,11 @@ public class Menu extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JMenuBar jMenuBarMenu;
-    private javax.swing.JMenu jMenuData;
+    private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton2;
+    private javax.swing.JButton jButton3;
     private javax.swing.JMenuItem jMenuItem1;
-    private javax.swing.JMenuItem jMenuItemIsiData;
-    private javax.swing.JMenuItem jMenuItemKeluar;
-    private javax.swing.JMenuItem jMenuItemLogOut;
-    private javax.swing.JMenu jMenuUser;
+    private javax.swing.JTextField jTextField1;
     // End of variables declaration//GEN-END:variables
 }
 

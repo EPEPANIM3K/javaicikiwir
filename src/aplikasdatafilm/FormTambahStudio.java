@@ -5,12 +5,17 @@
 package aplikasdatafilm;
 
 import Koneksi.Koneksi;
+import java.awt.Color;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
+import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.basic.BasicTableHeaderUI;
 import javax.swing.table.DefaultTableModel;
 /**
  *
@@ -19,6 +24,9 @@ import javax.swing.table.DefaultTableModel;
 public class FormTambahStudio extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormTambahStudio.class.getName());
+    private static final Color BURGUNDY = new Color(0x6D1F2B);
+    private static final Color CREME = new Color(0xF5EDE5);
+    private static final Color DEEP_CHARCOAL = new Color(0x171416);
 
     /**
      * Creates new form FormTambahGenre
@@ -43,6 +51,64 @@ public class FormTambahStudio extends javax.swing.JFrame {
             }
         });
         AdminMenuBar.buat(this);
+        applyTheme();
+    }
+
+    private void applyTheme() {
+        getContentPane().setBackground(DEEP_CHARCOAL);
+        jPanel1.setBackground(DEEP_CHARCOAL);
+
+        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
+            jLabel1, jLabel2, jLabel3
+        }) {
+            label.setForeground(CREME);
+        }
+
+        for (javax.swing.JTextField field : new javax.swing.JTextField[]{
+            jTextFieldCARI, jTextFieldGENRE
+        }) {
+            field.setBackground(CREME);
+            field.setForeground(DEEP_CHARCOAL);
+            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+        }
+
+        for (javax.swing.JButton button : new javax.swing.JButton[]{
+            jButtonTAMBAH, jButtonCARI, jButtonHAPUS, jButtonKEMBALI
+        }) {
+            button.setUI(new BasicButtonUI());
+            button.setBackground(BURGUNDY);
+            button.setForeground(CREME);
+            button.setOpaque(true);
+            button.setContentAreaFilled(true);
+            button.setBorderPainted(true);
+            button.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+            button.setFocusPainted(false);
+            button.setRolloverEnabled(false);
+            button.setEnabled(true);
+        }
+
+        // Atur ukuran tombol
+        ButtonSizingHelper.setSizeForButton(jButtonCARI, ButtonSizingHelper.TYPE_ACTION);
+        ButtonSizingHelper.setSizeForButton(jButtonTAMBAH, ButtonSizingHelper.TYPE_ACTION);
+        ButtonSizingHelper.setSizeForButton(jButtonHAPUS, ButtonSizingHelper.TYPE_ACTION);
+        ButtonSizingHelper.setSizeForButton(jButtonKEMBALI, ButtonSizingHelper.TYPE_ACTION);
+
+        jTableGENRE.setBackground(CREME);
+        jTableGENRE.setForeground(DEEP_CHARCOAL);
+        javax.swing.table.JTableHeader tableHeader = jTableGENRE.getTableHeader();
+        tableHeader.setUI(new BasicTableHeaderUI());
+        tableHeader.setOpaque(true);
+        tableHeader.setBackground(BURGUNDY);
+        tableHeader.setForeground(CREME);
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
+        headerRenderer.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        headerRenderer.setOpaque(true);
+        headerRenderer.setBackground(BURGUNDY);
+        headerRenderer.setForeground(CREME);
+        tableHeader.setDefaultRenderer(headerRenderer);
+        jTableGENRE.setGridColor(BURGUNDY);
+        jScrollPane1.setBackground(DEEP_CHARCOAL);
+        jScrollPane1.getViewport().setBackground(CREME);
     }
 
     /**

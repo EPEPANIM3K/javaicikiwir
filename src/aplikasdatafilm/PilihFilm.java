@@ -8,7 +8,11 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -25,7 +29,9 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 /**
  *
@@ -33,17 +39,16 @@ import javax.swing.SwingConstants;
  */
 public class PilihFilm extends javax.swing.JFrame {
 
+    private static final Color BURGUNDY = new Color(0x6D1F2B);
+    private static final Color CREME = new Color(0xF5EDE5);
+    private static final Color DEEP_CHARCOAL = new Color(0x171416);
+    private static final String SEARCH_PLACEHOLDER = "Cari judul film....";
+
     private final long idPengguna;
     private final List<PemesananService.Jadwal> daftarJadwal = new ArrayList<>();
-    private final JPanel[] panelCards;
-    private final JLabel[] labelPoster;
-    private final JLabel[] labelJudulPrefix;
-    private final JLabel[] labelJudul;
-    private final JLabel[] labelWaktu;
-    private final JLabel[] labelDurasi;
-    private final JLabel[] labelHarga;
-    private final JButton[] tombolBeli;
-    private final JPanel[] panelBawah;
+    private final JPanel panelGrid = new JPanel(new GridLayout(0, 5, 18, 18));
+    private JScrollPane scrollFilm;
+    private boolean searchPlaceholderShowing = true;
 
     private final DateTimeFormatter formatWaktu = DateTimeFormatter.ofPattern("HH.mm");
     private final DecimalFormat formatRupiah = new DecimalFormat("#,###",
@@ -60,26 +65,27 @@ public class PilihFilm extends javax.swing.JFrame {
         this.idPengguna = idPengguna;
         initComponents();
 
-        panelCards = new JPanel[]{jPanel3, jPanel4, jPanel5, jPanel7, jPanel8};
-        labelPoster = new JLabel[]{jLabel25, jLabel31, jLabel37, jLabel43, jLabel49};
-        labelJudulPrefix = new JLabel[]{jLabel26, jLabel32, jLabel38, jLabel44, jLabel50};
-        labelJudul = new JLabel[]{jLabel27, jLabel33, jLabel39, jLabel45, jLabel51};
-        labelWaktu = new JLabel[]{jLabel28, jLabel34, jLabel40, jLabel46, jLabel52};
-        labelDurasi = new JLabel[]{jLabel29, jLabel35, jLabel41, jLabel47, jLabel53};
-        labelHarga = new JLabel[]{jLabel30, jLabel36, jLabel42, jLabel48, jLabel54};
-        tombolBeli = new JButton[]{jButton6, jButton7, jButton8, jButton9, jButton10};
-        panelBawah = new JPanel[5];
+        setupDynamicLayout();
 
-        setupCardLayouts();
+        jTextField2.setText(SEARCH_PLACEHOLDER);
+        jTextField2.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent event) {
+                if (searchPlaceholderShowing) {
+                    jTextField2.setText("");
+                    searchPlaceholderShowing = false;
+                }
+            }
 
-        PlaceholderSupport.install(jTextField2, "Cari judul film....");
-        jButton5.addActionListener(event -> muatJadwal());
+            @Override
+            public void focusLost(FocusEvent event) {
+                if (jTextField2.getText().isBlank()) {
+                    jTextField2.setText(SEARCH_PLACEHOLDER);
+                    searchPlaceholderShowing = true;
+                }
+            }
+        });
         jTextField2.addActionListener(event -> muatJadwal());
-
-        for (int index = 0; index < tombolBeli.length; index++) {
-            final int posisi = index;
-            tombolBeli[index].addActionListener(event -> beliJadwal(posisi));
-        }
 
         jLabel23.setToolTipText("Keluar dari akun");
         jLabel23.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -92,102 +98,172 @@ public class PilihFilm extends javax.swing.JFrame {
         });
 
         muatJadwal();
-        UserMenuBar.buat(this, idPengguna);
     }
 
-    private void setupCardLayouts() {
-        for (int i = 0; i < 5; i++) {
-            JPanel card = panelCards[i];
-            JLabel poster = labelPoster[i];
-            JLabel prefix = labelJudulPrefix[i];
-            JLabel judul = labelJudul[i];
-            JLabel waktu = labelWaktu[i];
-            JLabel durasi = labelDurasi[i];
-            JLabel harga = labelHarga[i];
-            JButton beli = tombolBeli[i];
+    private void setupDynamicLayout() {
+        JPanel header = new JPanel();
+        header.setOpaque(false);
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
 
-            card.removeAll();
-            card.setLayout(new BorderLayout(0, 0));
-            card.setBorder(BorderFactory.createLineBorder(new Color(255, 153, 51), 3));
-            card.setBackground(new Color(255, 153, 51));
-            card.setPreferredSize(new Dimension(200, 425));
+        jPanel6.setBackground(DEEP_CHARCOAL);
+        jLabel22.setForeground(CREME);
+        jLabel23.setForeground(CREME);
+        jLabel24.setForeground(CREME);
+        jTextField2.setBackground(CREME);
+        jTextField2.setForeground(DEEP_CHARCOAL);
+        jTextField2.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+        
+        // Apply styling ke tombol jButton5 (tombol Cari)
+        jButton5.setUI(new BasicButtonUI());
+        jButton5.setBackground(BURGUNDY);
+        jButton5.setForeground(CREME);
+        jButton5.setOpaque(true);
+        jButton5.setContentAreaFilled(true);
+        jButton5.setBorderPainted(true);
+        jButton5.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BURGUNDY.darker()),
+                BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+        jButton5.setFocusPainted(false);
+        jButton5.setRolloverEnabled(false);
+        jButton5.setEnabled(true);
+        jButton5.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        jButton5.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        ButtonSizingHelper.setSizeForButton(jButton5, ButtonSizingHelper.TYPE_ACTION);
 
-            // Bagian atas: Poster film dibuat penuh
-            poster.setOpaque(true);
-            poster.setBackground(new Color(255, 153, 51));
-            poster.setHorizontalAlignment(SwingConstants.CENTER);
-            poster.setVerticalAlignment(SwingConstants.CENTER);
-            poster.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            poster.setForeground(new Color(50, 50, 50));
-            poster.setText("POSTER FILM");
-            poster.setPreferredSize(new Dimension(194, 240));
-            card.add(poster, BorderLayout.CENTER);
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setOpaque(false);
+        topBar.setBorder(BorderFactory.createEmptyBorder(12, 20, 0, 20));
+        topBar.add(jLabel22, BorderLayout.WEST);
+        topBar.add(jLabel23, BorderLayout.EAST);
 
-            // Bagian bawah: Panel putih untuk penjelasan film (tidak tertimpa poster)
-            JPanel bottomPanel = new JPanel();
-            panelBawah[i] = bottomPanel;
-            bottomPanel.setBackground(Color.WHITE);
-            bottomPanel.setOpaque(true);
-            bottomPanel.setPreferredSize(new Dimension(194, 185));
-            bottomPanel.setBorder(BorderFactory.createEmptyBorder(8, 10, 10, 10));
-            bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
+        jLabel24.setAlignmentX(CENTER_ALIGNMENT);
+        JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 9, 0));
+        searchBar.setOpaque(false);
+        searchBar.setBorder(BorderFactory.createEmptyBorder(0, 49, 0, 0));
+        jTextField2.setPreferredSize(new Dimension(263, 32));
+        searchBar.add(jTextField2);
+        searchBar.add(jButton5);
 
-            prefix.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            prefix.setForeground(new Color(80, 80, 80));
-            prefix.setText("Judul : ");
-            prefix.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+        header.add(topBar);
+        header.add(Box.createVerticalStrut(42));
+        header.add(jLabel24);
+        header.add(Box.createVerticalStrut(16));
+        header.add(searchBar);
+        header.add(Box.createVerticalStrut(20));
 
-            judul.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            judul.setForeground(Color.BLACK);
-            judul.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+        panelGrid.setBackground(DEEP_CHARCOAL);
+        panelGrid.setBorder(BorderFactory.createEmptyBorder(8, 49, 24, 33));
+        scrollFilm = new JScrollPane(panelGrid);
+        scrollFilm.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollFilm.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        scrollFilm.getVerticalScrollBar().setUnitIncrement(16);
+        scrollFilm.getVerticalScrollBar().setBackground(DEEP_CHARCOAL);
+        scrollFilm.getVerticalScrollBar().setForeground(BURGUNDY);
+        scrollFilm.setBorder(BorderFactory.createEmptyBorder());
+        scrollFilm.setBackground(DEEP_CHARCOAL);
+        scrollFilm.getViewport().setBackground(DEEP_CHARCOAL);
 
-            waktu.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            waktu.setForeground(new Color(80, 80, 80));
-            waktu.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+        jPanel6.removeAll();
+        jPanel6.setLayout(new BorderLayout());
+        jPanel6.add(header, BorderLayout.NORTH);
+        jPanel6.add(scrollFilm, BorderLayout.CENTER);
 
-            durasi.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            durasi.setForeground(new Color(80, 80, 80));
-            durasi.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+        getContentPane().removeAll();
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().setBackground(DEEP_CHARCOAL);
+        getContentPane().add(jPanel6, BorderLayout.CENTER);
+        setSize(new Dimension(1280, 760));
+        setLocationRelativeTo(null);
+    }
 
-            harga.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            harga.setForeground(new Color(230, 81, 0));
-            harga.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+    private JPanel buatCard(PemesananService.Jadwal jadwal, int posisi) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createLineBorder(BURGUNDY, 3));
+        card.setBackground(BURGUNDY);
+        card.setPreferredSize(new Dimension(200, 425));
 
-            beli.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            beli.setBackground(Color.WHITE);
-            beli.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            beli.setFocusPainted(false);
-            beli.setPreferredSize(new Dimension(85, 28));
-            beli.setMaximumSize(new Dimension(85, 28));
-            beli.setAlignmentX(JPanel.CENTER_ALIGNMENT);
+        JLabel poster = new JLabel("POSTER FILM", SwingConstants.CENTER);
+        poster.setOpaque(true);
+        poster.setBackground(BURGUNDY);
+        poster.setVerticalAlignment(SwingConstants.CENTER);
+        poster.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        poster.setForeground(CREME);
+        poster.setPreferredSize(new Dimension(194, 240));
+        PosterFetcher.muat(poster, jadwal.urlPoster(), 194, 240);
+        card.add(poster, BorderLayout.CENTER);
 
-            bottomPanel.add(prefix);
-            bottomPanel.add(Box.createVerticalStrut(2));
-            bottomPanel.add(judul);
-            bottomPanel.add(Box.createVerticalStrut(4));
-            bottomPanel.add(waktu);
-            bottomPanel.add(Box.createVerticalStrut(4));
-            bottomPanel.add(durasi);
-            bottomPanel.add(Box.createVerticalStrut(4));
-            bottomPanel.add(harga);
-            bottomPanel.add(Box.createVerticalGlue());
-            bottomPanel.add(beli);
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setBackground(CREME);
+        bottomPanel.setOpaque(true);
+        bottomPanel.setPreferredSize(new Dimension(194, 185));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(8, 10, 10, 10));
+        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
 
-            card.add(bottomPanel, BorderLayout.SOUTH);
-            card.revalidate();
-            card.repaint();
-        }
+        JLabel prefix = new JLabel("Judul : ");
+        prefix.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        prefix.setForeground(DEEP_CHARCOAL);
+        prefix.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+
+        JLabel judul = new JLabel(formatJudulHtml(jadwal.judul()));
+        judul.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        judul.setForeground(DEEP_CHARCOAL);
+        judul.setToolTipText(jadwal.judul() + " (" + jadwal.genre() + ")");
+        judul.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+
+        JLabel waktu = new JLabel(formatWaktu.format(jadwal.mulaiTayang()));
+        waktu.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        waktu.setForeground(DEEP_CHARCOAL);
+        waktu.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+
+        JLabel durasi = new JLabel(formatDurasi(jadwal.durasiMenit()));
+        durasi.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        durasi.setForeground(DEEP_CHARCOAL);
+        durasi.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+
+        JLabel harga = new JLabel("Rp " + formatRupiah.format(jadwal.hargaTiket()));
+        harga.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        harga.setForeground(BURGUNDY);
+        harga.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+
+        JButton beli = new JButton("BELI");
+        beli.setUI(new BasicButtonUI());
+        beli.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        beli.setBackground(BURGUNDY);
+        beli.setForeground(CREME);
+        beli.setOpaque(true);
+        beli.setContentAreaFilled(true);
+        beli.setBorderPainted(true);
+        beli.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BURGUNDY.darker()),
+                BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+        beli.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        beli.setFocusPainted(false);
+        beli.setRolloverEnabled(false);
+        ButtonSizingHelper.setSizeCustom(beli, 85, 28, 8, 2);
+        beli.setAlignmentX(JPanel.CENTER_ALIGNMENT);
+        beli.addActionListener(event -> beliJadwal(posisi));
+
+        bottomPanel.add(prefix);
+        bottomPanel.add(Box.createVerticalStrut(2));
+        bottomPanel.add(judul);
+        bottomPanel.add(Box.createVerticalStrut(4));
+        bottomPanel.add(waktu);
+        bottomPanel.add(Box.createVerticalStrut(4));
+        bottomPanel.add(durasi);
+        bottomPanel.add(Box.createVerticalStrut(4));
+        bottomPanel.add(harga);
+        bottomPanel.add(Box.createVerticalGlue());
+        bottomPanel.add(beli);
+        card.add(bottomPanel, BorderLayout.SOUTH);
+        return card;
     }
 
     private void muatJadwal() {
-        String kataKunci = PlaceholderSupport.getText(jTextField2).trim();
+        String kataKunci = searchPlaceholderShowing ? "" : jTextField2.getText().trim();
         boolean isSearch = !kataKunci.isEmpty();
 
-        for (JPanel card : panelCards) {
-            card.setVisible(false);
-        }
-
         try {
+            panelGrid.removeAll();
             daftarJadwal.clear();
             List<PemesananService.Jadwal> hasilDb = PemesananService.cariJadwal(kataKunci);
 
@@ -196,40 +272,11 @@ public class PilihFilm extends javax.swing.JFrame {
             for (PemesananService.Jadwal j : hasilDb) {
                 if (seenFilmIds.add(j.idFilm())) {
                     daftarJadwal.add(j);
-                    if (daftarJadwal.size() == 5) {
-                        break;
-                    }
                 }
             }
 
-            for (int index = 0; index < 5; index++) {
-                boolean tersedia = index < daftarJadwal.size();
-                panelCards[index].setVisible(tersedia);
-                if (tersedia) {
-                    PemesananService.Jadwal jadwal = daftarJadwal.get(index);
-                    labelPoster[index].setText("");
-                    PosterFetcher.muat(labelPoster[index], jadwal.urlPoster(), 194, 240);
-                    labelJudulPrefix[index].setText("Judul : ");
-                    labelJudul[index].setText(formatJudulHtml(jadwal.judul()));
-                    labelJudul[index].setToolTipText(jadwal.judul() + " (" + jadwal.genre() + ")");
-                    labelWaktu[index].setText(formatWaktu.format(jadwal.mulaiTayang()));
-                    labelDurasi[index].setText(formatDurasi(jadwal.durasiMenit()));
-                    labelHarga[index].setText("Rp " + formatRupiah.format(jadwal.hargaTiket()));
-                    tombolBeli[index].setVisible(true);
-                    tombolBeli[index].setEnabled(true);
-                } else {
-                    // Ketika search atau slot tidak ada film: kartu menjadi KOSONG
-                    labelPoster[index].setIcon(null);
-                    labelPoster[index].setText("");
-                    labelJudulPrefix[index].setText("");
-                    labelJudul[index].setText("");
-                    labelJudul[index].setToolTipText(null);
-                    labelWaktu[index].setText("");
-                    labelDurasi[index].setText("");
-                    labelHarga[index].setText("");
-                    tombolBeli[index].setVisible(false);
-                    tombolBeli[index].setEnabled(false);
-                }
+            for (int index = 0; index < daftarJadwal.size(); index++) {
+                panelGrid.add(buatCard(daftarJadwal.get(index), index));
             }
 
             if (isSearch && daftarJadwal.isEmpty()) {
@@ -238,8 +285,9 @@ public class PilihFilm extends javax.swing.JFrame {
                         "Pencarian Film",
                         JOptionPane.INFORMATION_MESSAGE);
             }
-            jPanel6.revalidate();
-            jPanel6.repaint();
+            panelGrid.revalidate();
+            panelGrid.repaint();
+            scrollFilm.getVerticalScrollBar().setValue(0);
         } catch (SQLException exception) {
             java.util.logging.Logger.getLogger(PilihFilm.class.getName()).log(
                     java.util.logging.Level.SEVERE, "Gagal memuat jadwal tayang", exception);
@@ -247,6 +295,10 @@ public class PilihFilm extends javax.swing.JFrame {
                     "Jadwal film gagal dimuat. Periksa koneksi database.", "Kesalahan database",
                     JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void jButton5ActionPerformed(java.awt.event.ActionEvent event) {
+        muatJadwal();
     }
 
     private String formatJudulHtml(String judul) {
@@ -358,7 +410,7 @@ public class PilihFilm extends javax.swing.JFrame {
         jButton5.setText("Cari");
         jButton5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                muatJadwal();
+                jButton5ActionPerformed(evt);
             }
         });
 

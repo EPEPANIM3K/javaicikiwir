@@ -5,6 +5,9 @@
 package aplikasdatafilm;
 
 import Koneksi.Koneksi;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Insets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,16 +20,23 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.basic.BasicTableHeaderUI;
 import javax.swing.table.DefaultTableModel;
 /**
  *
  * @author WINDOWS 11
  */
 public class FormFilmAdmin extends javax.swing.JFrame {
-    
+
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormFilmAdmin.class.getName());
+    private static final Color BURGUNDY = new Color(0x6D1F2B);
+    private static final Color CREME = new Color(0xF5EDE5);
+    private static final Color DEEP_CHARCOAL = new Color(0x171416);
     private Map<String, Integer> genreMap = new HashMap<>();
     private final Map<String, Integer> studioMap = new HashMap<>();
     private boolean memperbaruiJadwal;
@@ -36,6 +46,7 @@ public class FormFilmAdmin extends javax.swing.JFrame {
 
     public FormFilmAdmin() {
         initComponents();
+        applyTheme();
         jTextFieldID.setEditable(false);
         PlaceholderSupport.install(jTextField1, "Cari judul atau sutradara");
         PlaceholderSupport.install(jTextFieldJUDULFILM, "Masukkan judul film");
@@ -87,6 +98,92 @@ public class FormFilmAdmin extends javax.swing.JFrame {
         AdminMenuBar.buat(this);
         pack();
         setLocationRelativeTo(null);
+    }
+
+    private void applyTheme() {
+        getContentPane().setBackground(DEEP_CHARCOAL);
+        jPanel1.setBackground(DEEP_CHARCOAL);
+
+        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
+            jLabel1, jLabel2, jLabel3, jLabel4, jLabel5, jLabel6, jLabel7, jLabel8,
+            jLabel9, jLabel11, jLabel12, jLabel13, jLabel14, jLabelURLPoster
+        }) {
+            label.setForeground(CREME);
+        }
+
+        for (JTextField field : new JTextField[]{
+            jTextFieldID, jTextFieldJUDULFILM, jTextFieldTAHUN, jTextFieldSUTRADARA,
+            jTextFieldDURASI, jTextFieldRATING, jTextFieldURLPoster, jTextFieldHarga,
+            jTextFieldTanggal, jTextFieldTAHUN1, jTextField1
+        }) {
+            field.setBackground(CREME);
+            field.setForeground(DEEP_CHARCOAL);
+            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+        }
+
+        for (javax.swing.JComboBox<?> comboBox : new javax.swing.JComboBox<?>[]{
+            jComboBoxGENRE, jComboBoxstudio
+        }) {
+            comboBox.setBackground(CREME);
+            comboBox.setForeground(DEEP_CHARCOAL);
+            comboBox.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+        }
+
+        for (javax.swing.JButton button : new javax.swing.JButton[]{
+            jButton1, jButton3, jButton4, jButton5, jButton7, jButton8, jButton9, jButtonUploadPoster
+        }) {
+            button.setUI(new BasicButtonUI());
+            button.setBackground(BURGUNDY);
+            button.setForeground(CREME);
+            button.setOpaque(true);
+            button.setContentAreaFilled(true);
+            button.setBorderPainted(true);
+            button.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+            button.setFocusPainted(false);
+            button.setRolloverEnabled(false);
+        }
+
+        // Tombol dengan teks pendek/standar
+        ButtonSizingHelper.setSizeForButton(jButton5, ButtonSizingHelper.TYPE_ACTION);  // CARI
+        for (javax.swing.JButton button : new javax.swing.JButton[]{jButton7, jButton8}) {
+            Dimension size = new Dimension(100, 34);
+            button.setPreferredSize(size);
+            button.setMinimumSize(size);
+            button.setMaximumSize(size);
+            button.setMargin(new Insets(4, 8, 4, 8));
+        }
+
+        // Tombol utama dengan teks panjang
+        ButtonSizingHelper.setSizeCustom(jButton1, 110, 34, 12, 4);  // TAMBAH FILM
+        ButtonSizingHelper.setSizeCustom(jButton3, 80, 34, 12, 4);   // EDIT
+        ButtonSizingHelper.setSizeCustom(jButton4, 80, 34, 12, 4);   // HAPUS
+        ButtonSizingHelper.setSizeCustom(jButton9, 110, 34, 12, 4);  // CLEAR FIELD
+
+        // Tombol Upload
+        ButtonSizingHelper.setSizeCustom(jButtonUploadPoster, 85, 34, 10, 4);
+
+        jTable1.setBackground(CREME);
+        jTable1.setForeground(DEEP_CHARCOAL);
+        javax.swing.table.JTableHeader tableHeader = jTable1.getTableHeader();
+        tableHeader.setUI(new BasicTableHeaderUI());
+        tableHeader.setOpaque(true);
+        tableHeader.setBackground(BURGUNDY);
+        tableHeader.setForeground(CREME);
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
+        headerRenderer.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        headerRenderer.setOpaque(true);
+        headerRenderer.setBackground(BURGUNDY);
+        headerRenderer.setForeground(CREME);
+        tableHeader.setDefaultRenderer(headerRenderer);
+        jTable1.setGridColor(BURGUNDY);
+        jScrollPane1.setBackground(DEEP_CHARCOAL);
+        jScrollPane1.getViewport().setBackground(CREME);
+
+            for (javax.swing.JButton button : new javax.swing.JButton[]{
+                jButton1, jButton5, jButton7, jButton8, jButton9
+            }) {
+                button.setEnabled(true);
+            }
     }
 
     private record JadwalFilm(int idStudio, LocalDateTime mulaiTayang,

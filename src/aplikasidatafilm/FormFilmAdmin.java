@@ -5,12 +5,15 @@
 package aplikasidatafilm;
 
 import Koneksi.Koneksi;
+import java.awt.Color;
+import java.awt.Cursor;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 /**
@@ -18,39 +21,56 @@ import javax.swing.table.DefaultTableModel;
  * @author WINDOWS 11
  */
 public class FormFilmAdmin extends javax.swing.JFrame {
-    
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormFilmAdmin.class.getName());
-    private Map<String, Integer> genreMap = new HashMap<>();
+     
+     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormFilmAdmin.class.getName());
+     private static final Color BURGUNDY = new Color(0x6D1F2B);
+     private static final Color CREME = new Color(0xF5EDE5);
+     private static final Color DEEP_CHARCOAL = new Color(0x171416);
+     private Map<String, Integer> genreMap = new HashMap<>();
 
-    public FormFilmAdmin() {
-        initComponents();
-        jTextFieldID.setEditable(false);
-        loadComboGenre();
-        loadDataFilm();
+     public FormFilmAdmin() {
+         initComponents();
+         jTextFieldID.setEditable(false);
+         loadComboGenre();
+         loadDataFilm();
+         applyButtonStyles();
 
-        jButton1.addActionListener(e -> tambahFilm());
-        jButton3.addActionListener(e -> editFilm());
-        jButton4.addActionListener(e -> hapusFilm());
-        jButton5.addActionListener(e -> cariDataFilm());
+         jButton1.addActionListener(e -> tambahFilm());
+         jButton3.addActionListener(e -> editFilm());
+         jButton4.addActionListener(e -> hapusFilm());
+         jButton5.addActionListener(e -> cariDataFilm());
 
-        jButton7.addActionListener(e -> {
-            new FormTambahGenre().setVisible(true);
-            dispose();
-        });
+         jButton7.addActionListener(e -> {
+             new FormTambahGenre().setVisible(true);
+             dispose();
+         });
 
-        jTable1.getSelectionModel().addListSelectionListener(event -> {
-            if (!event.getValueIsAdjusting() && jTable1.getSelectedRow() != -1) {
-                int row = jTable1.getSelectedRow();
-                jTextFieldID.setText(jTable1.getValueAt(row, 0).toString());
-                jTextFieldJUDULFILM.setText(jTable1.getValueAt(row, 1).toString());
-                jComboBoxGENRE.setSelectedItem(jTable1.getValueAt(row, 2).toString());
-                jTextFieldTAHUN.setText(jTable1.getValueAt(row, 3).toString());
-                jTextFieldSUTRADARA.setText(jTable1.getValueAt(row, 4).toString());
-                jTextFieldDURASI.setText(jTable1.getValueAt(row, 5).toString());
-                jTextFieldRATING.setText(jTable1.getValueAt(row, 6).toString());
-            }
-        });
-    }
+         jTable1.getSelectionModel().addListSelectionListener(event -> {
+             if (!event.getValueIsAdjusting() && jTable1.getSelectedRow() != -1) {
+                 int row = jTable1.getSelectedRow();
+                 jTextFieldID.setText(jTable1.getValueAt(row, 0).toString());
+                 jTextFieldJUDULFILM.setText(jTable1.getValueAt(row, 1).toString());
+                 jComboBoxGENRE.setSelectedItem(jTable1.getValueAt(row, 2).toString());
+                 jTextFieldTAHUN.setText(jTable1.getValueAt(row, 3).toString());
+                 jTextFieldSUTRADARA.setText(jTable1.getValueAt(row, 4).toString());
+                 jTextFieldDURASI.setText(jTable1.getValueAt(row, 5).toString());
+                 jTextFieldRATING.setText(jTable1.getValueAt(row, 6).toString());
+             }
+         });
+     }
+
+     private void applyButtonStyles() {
+         javax.swing.JButton[] buttons = {jButton1, jButton3, jButton4, jButton5, jButton7};
+         for (javax.swing.JButton button : buttons) {
+             button.setBackground(BURGUNDY);
+             button.setForeground(CREME);
+             button.setOpaque(true);
+             button.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+             button.setBorder(BorderFactory.createLineBorder(BURGUNDY, 2));
+             button.setFocusPainted(false);
+             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+         }
+     }
 
     /**
      * This method is called from within the constructor to initialize the form.

@@ -7,7 +7,10 @@ package aplikasdatafilm;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
@@ -24,9 +27,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.BorderFactory;
+import javax.swing.AbstractButton;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 /**
  * Form Pemesanan Tiket Bioskop.
@@ -38,6 +44,24 @@ import javax.swing.JTextField;
 public class BeliTiket extends javax.swing.JFrame {
 
     private static final Logger LOGGER = Logger.getLogger(BeliTiket.class.getName());
+
+    private static final class SeatButtonUI extends BasicButtonUI {
+        @Override
+        protected void paintText(Graphics graphics, AbstractButton button, Rectangle textRect, String text) {
+            if (button.isEnabled()) {
+                super.paintText(graphics, button, textRect, text);
+                return;
+            }
+
+            FontMetrics metrics = graphics.getFontMetrics(button.getFont());
+            int x = textRect.x + (textRect.width - metrics.stringWidth(text)) / 2;
+            int y = textRect.y + (textRect.height - metrics.getHeight()) / 2 + metrics.getAscent();
+            Color originalColor = graphics.getColor();
+            graphics.setColor(button.getForeground());
+            graphics.drawString(text, x, y);
+            graphics.setColor(originalColor);
+        }
+    }
 
     private final long idPengguna;
     private final PilihFilm parentFrame;
@@ -56,15 +80,16 @@ public class BeliTiket extends javax.swing.JFrame {
     // Flag untuk menghindari cascading event listener saat mengisi dropdown
     private boolean isUpdatingDropdown = false;
 
-    // Warna status kursi
-    private static final Color WARNA_NORMAL = new Color(245, 245, 245);
-    private static final Color WARNA_TEKS_NORMAL = Color.BLACK;
+    private static final Color BURGUNDY = new Color(0x6D1F2B);
+    private static final Color CREME = new Color(0xF5EDE5);
+    private static final Color DEEP_CHARCOAL = new Color(0x171416);
 
-    private static final Color WARNA_TERPILIH = new Color(45, 52, 58); // Gelap saat dipilih
-    private static final Color WARNA_TEKS_TERPILIH = Color.WHITE;
-
-    private static final Color WARNA_SUDAH_DIPESAN = new Color(220, 53, 69); // Merah saat sudah dibeli
-    private static final Color WARNA_TEKS_SUDAH_DIPESAN = Color.WHITE;
+    private static final Color WARNA_NORMAL = CREME;
+    private static final Color WARNA_TEKS_NORMAL = DEEP_CHARCOAL;
+    private static final Color WARNA_TERPILIH = BURGUNDY;
+    private static final Color WARNA_TEKS_TERPILIH = CREME;
+    private static final Color WARNA_SUDAH_DIPESAN = DEEP_CHARCOAL;
+    private static final Color WARNA_TEKS_SUDAH_DIPESAN = CREME;
 
     // Formatters
     private final DecimalFormat formatRupiah = new DecimalFormat("#,###",
@@ -91,7 +116,6 @@ public class BeliTiket extends javax.swing.JFrame {
 
         initComponents();
         setupComponents();
-        UserMenuBar.buat(this, idPengguna);
     }
 
     private void setupComponents() {
@@ -135,6 +159,8 @@ public class BeliTiket extends javax.swing.JFrame {
             btn.setFocusPainted(false);
             btn.setOpaque(true);
             btn.setContentAreaFilled(true);
+            btn.setUI(new SeatButtonUI());
+            ButtonSizingHelper.setSizeForButton(btn, ButtonSizingHelper.TYPE_SEAT);
             // Bersihkan action listener bawaan form
             for (var al : btn.getActionListeners()) {
                 btn.removeActionListener(al);
@@ -159,6 +185,7 @@ public class BeliTiket extends javax.swing.JFrame {
             jButton4.removeActionListener(al);
         }
         jButton4.addActionListener(e -> tambahTiket());
+        ButtonSizingHelper.setSizeForButton(jButton4, ButtonSizingHelper.TYPE_SMALL);
 
         jButton29.setText("-");
         jButton29.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -167,6 +194,7 @@ public class BeliTiket extends javax.swing.JFrame {
             jButton29.removeActionListener(al);
         }
         jButton29.addActionListener(e -> kurangTiket());
+        ButtonSizingHelper.setSizeForButton(jButton29, ButtonSizingHelper.TYPE_SMALL);
 
         // Tombol BELI TIKET & PILIH KURSI (keduanya memproses pemesanan)
         jButton2.setText("BELI TIKET");
@@ -176,6 +204,7 @@ public class BeliTiket extends javax.swing.JFrame {
             jButton2.removeActionListener(al);
         }
         jButton2.addActionListener(e -> prosesBeliTiket());
+        ButtonSizingHelper.setSizeForButton(jButton2, ButtonSizingHelper.TYPE_PRIMARY);
 
         jButton28.setVisible(false);
         jButton28.setEnabled(false);
@@ -185,12 +214,16 @@ public class BeliTiket extends javax.swing.JFrame {
         for (var al : jButton28.getActionListeners()) {
             jButton28.removeActionListener(al);
         }
+        ButtonSizingHelper.setSizeForButton(jButton28, ButtonSizingHelper.TYPE_PRIMARY);
 
         jButton3.setText("KEMBALI");
         for (var al : jButton3.getActionListeners()) {
             jButton3.removeActionListener(al);
         }
         jButton3.addActionListener(e -> kembaliKePilihFilm());
+        ButtonSizingHelper.setSizeForButton(jButton3, ButtonSizingHelper.TYPE_ACTION);
+
+        applyTheme();
 
         // Jika jadwalAwal null (misal dipanggil langsung dari main), ambil jadwal pertama dari database
         if (jadwalAwal == null) {
@@ -208,6 +241,54 @@ public class BeliTiket extends javax.swing.JFrame {
         if (jadwalAktif != null) {
             jTextFieldJudulFilm.setText(jadwalAktif.judul());
             muatDaftarJadwalDanDropdown();
+        }
+    }
+
+    private void applyTheme() {
+        getContentPane().setBackground(DEEP_CHARCOAL);
+        jPanel1.setBackground(DEEP_CHARCOAL);
+
+        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
+            jLabel1, jLabel2, jLabel3, jLabel4, jLabel5, jLabel6, jLabel7,
+            jLabel8, jLabel10, jLabel11, jLabel12, jLabel13, jLabel14
+        }) {
+            label.setForeground(CREME);
+        }
+
+        for (JTextField field : new JTextField[]{
+            jTextFieldJudulFilm, jTextField1, jTextField2, jTextField3
+        }) {
+            field.setBackground(CREME);
+            field.setForeground(DEEP_CHARCOAL);
+            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+        }
+
+        for (javax.swing.JComboBox<?> comboBox : new javax.swing.JComboBox<?>[]{
+            jComboBox1, jComboBox2, jComboBox3
+        }) {
+            comboBox.setBackground(CREME);
+            comboBox.setForeground(DEEP_CHARCOAL);
+            comboBox.setBorder(BorderFactory.createLineBorder(BURGUNDY));
+        }
+
+        for (JButton button : new JButton[]{jButton2, jButton3, jButton4, jButton29}) {
+            button.setUI(new BasicButtonUI());
+            button.setBackground(BURGUNDY);
+            button.setForeground(CREME);
+            button.setOpaque(true);
+            button.setContentAreaFilled(true);
+            button.setBorderPainted(true);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BURGUNDY.darker()),
+                    BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+            button.setFocusPainted(false);
+            button.setRolloverEnabled(false);
+            button.setEnabled(true);
+            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        }
+
+        for (JButton button : tombolKursiMap.values()) {
+            button.setBorder(BorderFactory.createLineBorder(BURGUNDY));
         }
     }
 
@@ -443,7 +524,7 @@ public class BeliTiket extends javax.swing.JFrame {
                     // Pemesanan tiket sudah sesuai dengan jumlah kursinya -> kursi lain cannot click
                     btn.setEnabled(false);
                     btn.setBackground(WARNA_NORMAL);
-                    btn.setForeground(Color.LIGHT_GRAY);
+                    btn.setForeground(WARNA_TEKS_NORMAL);
                     btn.setToolTipText("Pemesanan tiket sudah sesuai (" + jumlahTiket + " tiket). Batalkan kursi lain untuk mengubah.");
                     btn.setCursor(Cursor.getDefaultCursor());
                 } else {

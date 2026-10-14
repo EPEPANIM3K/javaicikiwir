@@ -3,16 +3,24 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package aplikasdatafilm;
+import java.awt.Color;
+import java.awt.Cursor;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 /**
  *
  * @author ASUS
  */
 public class StrukFilm extends javax.swing.JFrame {
+
+    private static final Color BURGUNDY = new Color(0x6D1F2B);
+    private static final Color CREME = new Color(0xF5EDE5);
+    private static final Color DEEP_CHARCOAL = new Color(0x171416);
 
     private long idPengguna;
     private long idPemesanan;
@@ -36,13 +44,51 @@ public class StrukFilm extends javax.swing.JFrame {
                 jTextField3, jTextField4, jTextField5, jTextField6, jTextField7, jTextField8,
                 jTextField9, jTextField10}) {
             field.setEditable(false);
+            field.setBackground(CREME);
+            field.setForeground(DEEP_CHARCOAL);
+            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
         }
         JBuutton.addActionListener(event -> {
             dispose();
+            new PilihFilm(idPengguna).setVisible(true);
         });
         jButton1.addActionListener(event -> cetakStruk());
         muatStruk();
-        UserMenuBar.buat(this, idPengguna);
+//        UserMenuBar.buat(this, idPengguna);
+        applyTheme();
+    }
+
+    private void applyTheme() {
+        getContentPane().setBackground(DEEP_CHARCOAL);
+        jPanel1.setBackground(DEEP_CHARCOAL);
+
+        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
+            jLabel1, jLabel2, jLabel3, jLabel4, jLabel5, jLabel6, jLabel7, jLabel8,
+            jLabel9, jLabel10, jLabel11, jLabel12
+        }) {
+            label.setForeground(CREME);
+        }
+
+        // Apply styling ke tombol menggunakan style dari Menu.java
+        for (javax.swing.JButton button : new javax.swing.JButton[]{JBuutton, jButton1}) {
+            button.setUI(new BasicButtonUI());
+            button.setBackground(BURGUNDY);
+            button.setForeground(CREME);
+            button.setOpaque(true);
+            button.setContentAreaFilled(true);
+            button.setBorderPainted(true);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BURGUNDY.darker()),
+                    BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+            button.setFocusPainted(false);
+            button.setRolloverEnabled(false);
+            button.setEnabled(true);
+            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            button.setFont(new java.awt.Font("Segoe UI", 1, 12));
+        }
+
+        ButtonSizingHelper.setSizeForButton(JBuutton, ButtonSizingHelper.TYPE_ACTION);
+        ButtonSizingHelper.setSizeForButton(jButton1, ButtonSizingHelper.TYPE_ACTION);
     }
 
     private void muatStruk() {

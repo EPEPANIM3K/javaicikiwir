@@ -1,1276 +1,948 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package aplikasdatafilm;
 
 import Koneksi.Koneksi;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Insets;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.awt.*;
+import java.io.File;
+import java.math.BigDecimal;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import javax.swing.BorderFactory;
-import javax.swing.JOptionPane;
-import javax.swing.JTextField;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.plaf.basic.BasicButtonUI;
-import javax.swing.plaf.basic.BasicTableHeaderUI;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
-/**
- *
- * @author WINDOWS 11
- */
-public class FormFilmAdmin extends javax.swing.JFrame {
 
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormFilmAdmin.class.getName());
-    private static final Color BURGUNDY = new Color(0x6D1F2B);
-    private static final Color CREME = new Color(0xF5EDE5);
-    private static final Color DEEP_CHARCOAL = new Color(0x171416);
-    private Map<String, Integer> genreMap = new HashMap<>();
+/**
+ * Modern Cinema Film & Showtime Management Screen (1280x720).
+ * Features:
+ * - Date Picker calendar selection with Indonesian standard formatting.
+ * - Dedicated Year Picker (JSpinner) for movie release year.
+ * - Interactive Showtime Chip Panel with Time Picker dialog (hours:minutes),
+ *   click-to-edit, delete, duplicate prevention, and responsive wrapping.
+ * - Studio collision validation to prevent overlapping showtimes in the same studio.
+ * - High-resolution 1280x720 layout with movie table and poster preview.
+ */
+public class FormFilmAdmin extends JFrame {
+
+    private final Map<String, Integer> genreMap = new HashMap<>();
     private final Map<String, Integer> studioMap = new HashMap<>();
-    private boolean memperbaruiJadwal;
+
+    // Form Components
+    private JTextField txtId;
+    private JTextField txtJudul;
+    private JComboBox<String> cbGenre;
+    private JSpinner spinTahun;
+    private JTextField txtSutradara;
+    private JSpinner spinDurasi;
+    private JSpinner spinRating;
+    private JTextField txtUrlPoster;
+    private JLabel lblPosterPreview;
+
+    // Schedule Components
+    private JComboBox<String> cbStudio;
+    private JTextField txtHargaTiket;
+    private LocalDate selectedTanggal = LocalDate.now();
+    private JLabel lblTanggalDisplay;
+    private ShowtimeChipPanel showtimePanel;
+
+    // Table & Search
+    private JTextField txtSearch;
+    private JTable tableFilm;
+    private JButton btnTambah;
+    private JButton btnEdit;
+    private JButton btnHapus;
+    private JButton btnClear;
+
+    // Tracking state for editing schedules
+    private Integer filmGrupJadwalAwal;
     private LocalDate tanggalGrupJadwalAwal;
     private Integer studioGrupJadwalAwal;
-    private Integer filmGrupJadwalAwal;
+
+    public record JadwalFilm(int idStudio, LocalDateTime mulaiTayang, BigDecimal hargaTiket, boolean memilikiTiket) {}
 
     public FormFilmAdmin() {
-        initComponents();
-        applyTheme();
-        jTextFieldID.setEditable(false);
-        PlaceholderSupport.install(jTextField1, "Cari judul atau sutradara");
-        PlaceholderSupport.install(jTextFieldJUDULFILM, "Masukkan judul film");
-        PlaceholderSupport.install(jTextFieldTAHUN, "Contoh: 2026");
-        PlaceholderSupport.install(jTextFieldSUTRADARA, "Masukkan nama sutradara");
-        PlaceholderSupport.install(jTextFieldDURASI, "Durasi dalam menit");
-        PlaceholderSupport.install(jTextFieldRATING, "Rating 0 sampai 10");
-        PlaceholderSupport.install(jTextFieldTanggal, "YYYY-MM-DD");
-        PlaceholderSupport.install(jTextFieldTAHUN1, "Contoh: 14.00, 15.00");
-        PlaceholderSupport.install(jTextFieldHarga, "Harga tiket");
-        PlaceholderSupport.install(jTextFieldURLPoster, "URL poster gambar (http/https)");
-        jButton3.setVisible(false);
-        jButton4.setVisible(false);
+        CinemaTheme.standardizeFrame(this, "TIKET KU — Manajemen Film & Jadwal Tayang");
+        buildUI();
         loadComboGenre();
         loadComboStudio();
-        jTextFieldTanggal.addActionListener(event -> muatJadwalGrupTerpilih());
-        jComboBoxstudio.addActionListener(event -> {
-            if (!memperbaruiJadwal) {
-                muatJadwalGrupTerpilih();
+        loadDataFilm();
+        updateButtonStates(false);
+    }
+
+    private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(CinemaTheme.BG_DARK);
+
+        // Header
+        JPanel header = CinemaTheme.createStaffHeader(this, "Manajemen Film & Jadwal Tayang", "ADMINISTRATOR", () -> {
+            dispose();
+            new Login().setVisible(true);
+        });
+        root.add(header, BorderLayout.NORTH);
+
+        // Main Container: 2 Columns
+        // Left Column: Form Controls (width 540)
+        // Right Column: Film Table & Search (width remaining)
+        JPanel mainPanel = new JPanel(new GridBagLayout());
+        mainPanel.setOpaque(false);
+        mainPanel.setBorder(new EmptyBorder(14, 20, 14, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // ── LEFT: FORM PANEL ───────────────────────────────────────────────
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.52;
+        gbc.insets = new Insets(0, 0, 0, 14);
+
+        JPanel formCard = CinemaTheme.createCard();
+        formCard.setLayout(new BorderLayout(0, 10));
+
+        JScrollPane formScroll = new JScrollPane(createFormInnerPanel());
+        formScroll.setBorder(BorderFactory.createEmptyBorder());
+        formScroll.setOpaque(false);
+        formScroll.getViewport().setOpaque(false);
+        formScroll.getVerticalScrollBar().setUnitIncrement(14);
+        formCard.add(formScroll, BorderLayout.CENTER);
+
+        // Buttons row
+        JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        btnBar.setOpaque(false);
+
+        btnClear = CinemaTheme.createSecondaryButton("Reset Form");
+        btnClear.addActionListener(e -> clearFields());
+
+        btnHapus = CinemaTheme.createDangerButton("Hapus Film");
+        btnHapus.addActionListener(e -> hapusFilm());
+
+        btnEdit = CinemaTheme.createPrimaryButton("Simpan Edit");
+        btnEdit.addActionListener(e -> editFilm());
+
+        btnTambah = CinemaTheme.createSuccessButton("+ Tambah Film");
+        btnTambah.addActionListener(e -> tambahFilm());
+
+        btnBar.add(btnClear);
+        btnBar.add(btnHapus);
+        btnBar.add(btnEdit);
+        btnBar.add(btnTambah);
+        formCard.add(btnBar, BorderLayout.SOUTH);
+
+        mainPanel.add(formCard, gbc);
+
+        // ── RIGHT: TABLE & PREVIEW PANEL ───────────────────────────────────
+        gbc.gridx = 1;
+        gbc.weightx = 0.48;
+        gbc.insets = new Insets(0, 0, 0, 0);
+
+        JPanel tableCard = CinemaTheme.createCard();
+        tableCard.setLayout(new BorderLayout(0, 10));
+
+        // Search bar
+        JPanel searchBar = new JPanel(new BorderLayout(8, 0));
+        searchBar.setOpaque(false);
+
+        JLabel lblSearch = new JLabel("🔍 Cari Film:");
+        lblSearch.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblSearch.setForeground(CinemaTheme.CREME);
+        searchBar.add(lblSearch, BorderLayout.WEST);
+
+        txtSearch = new JTextField();
+        CinemaTheme.styleTextField(txtSearch);
+        txtSearch.addActionListener(e -> cariDataFilm());
+        searchBar.add(txtSearch, BorderLayout.CENTER);
+
+        JPanel searchBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        searchBtns.setOpaque(false);
+        JButton btnCari = CinemaTheme.createPrimaryButton("Cari");
+        btnCari.addActionListener(e -> cariDataFilm());
+        JButton btnResetSearch = CinemaTheme.createSecondaryButton("Semua");
+        btnResetSearch.addActionListener(e -> {
+            txtSearch.setText("");
+            loadDataFilm();
+        });
+        searchBtns.add(btnCari);
+        searchBtns.add(btnResetSearch);
+        searchBar.add(searchBtns, BorderLayout.EAST);
+
+        tableCard.add(searchBar, BorderLayout.NORTH);
+
+        // Table
+        tableFilm = new JTable();
+        CinemaTheme.styleTable(tableFilm);
+        tableFilm.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tableFilm.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                tampilkanFilmTerpilih();
             }
         });
-        loadDataFilm();
 
-        jButton1.addActionListener(e -> tambahFilm());
-        jButton3.addActionListener(e -> editFilm());
-        jButton4.addActionListener(e -> hapusFilm());
-        jButton9.addActionListener(e -> clearFields());
-        jButton5.addActionListener(e -> cariDataFilm());
-        jButton8.addActionListener(event -> {
-            new FormTambahStudio().setVisible(true);
-            dispose();
-        });
+        JScrollPane tableScroll = new JScrollPane(tableFilm);
+        tableScroll.setBorder(BorderFactory.createLineBorder(CinemaTheme.CARD_BORDER, 1));
+        tableScroll.getViewport().setBackground(CinemaTheme.CARD_BG);
+        tableCard.add(tableScroll, BorderLayout.CENTER);
 
-        jButton7.addActionListener(e -> {
+        // Bottom: Poster thumbnail preview & quick stats
+        JPanel bottomPreview = new JPanel(new BorderLayout(12, 0));
+        bottomPreview.setOpaque(false);
+        bottomPreview.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, CinemaTheme.CARD_BORDER),
+                BorderFactory.createEmptyBorder(8, 0, 0, 0)
+        ));
+
+        lblPosterPreview = new JLabel("POSTER", SwingConstants.CENTER);
+        lblPosterPreview.setPreferredSize(new Dimension(70, 95));
+        lblPosterPreview.setBackground(CinemaTheme.PANEL_BG);
+        lblPosterPreview.setOpaque(true);
+        lblPosterPreview.setBorder(BorderFactory.createLineBorder(CinemaTheme.BURGUNDY, 1));
+        lblPosterPreview.setForeground(CinemaTheme.TEXT_MUTED);
+
+        JLabel lblHelp = new JLabel("<html><body style='color:#A89DA2; font-size:9pt; line-height:1.4;'>"
+                + "<b>Petunjuk:</b><br>"
+                + "• Pilih baris tabel untuk melihat/mengedit film & jadwal tayangnya.<br>"
+                + "• Jam tayang dapat ditambah banyak sesi per tanggal & diedit langsung.<br>"
+                + "• Sistem otomatis memeriksa bentrok jam tayang pada studio yang sama.</body></html>");
+
+        bottomPreview.add(lblPosterPreview, BorderLayout.WEST);
+        bottomPreview.add(lblHelp, BorderLayout.CENTER);
+        tableCard.add(bottomPreview, BorderLayout.SOUTH);
+
+        mainPanel.add(tableCard, gbc);
+        root.add(mainPanel, BorderLayout.CENTER);
+
+        AdminMenuBar.buat(this);
+        getContentPane().add(root);
+    }
+
+    private JPanel createFormInnerPanel() {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setOpaque(false);
+
+        // ── SECTION A: DATA FILM ───────────────────────────────────────────
+        JLabel sec1 = new JLabel("INFORMASI FILM");
+        sec1.setFont(CinemaTheme.FONT_SECTION);
+        sec1.setForeground(CinemaTheme.ACCENT_GOLD);
+        p.add(sec1);
+        p.add(Box.createVerticalStrut(10));
+
+        // Row 1: ID Film & Judul Film
+        JPanel r1 = new JPanel(new BorderLayout(10, 0));
+        r1.setOpaque(false);
+
+        JPanel pId = new JPanel(new BorderLayout(4, 0));
+        pId.setOpaque(false);
+        pId.setPreferredSize(new Dimension(80, 40));
+        JLabel lblId = new JLabel("ID:");
+        lblId.setFont(CinemaTheme.FONT_SMALL);
+        lblId.setForeground(CinemaTheme.TEXT_MUTED);
+        txtId = new JTextField();
+        txtId.setEditable(false);
+        CinemaTheme.styleTextField(txtId);
+        pId.add(lblId, BorderLayout.NORTH);
+        pId.add(txtId, BorderLayout.CENTER);
+
+        JPanel pJudul = new JPanel(new BorderLayout(4, 0));
+        pJudul.setOpaque(false);
+        JLabel lblJudul = new JLabel("Judul Film:");
+        lblJudul.setFont(CinemaTheme.FONT_SMALL);
+        lblJudul.setForeground(CinemaTheme.TEXT_MUTED);
+        txtJudul = new JTextField();
+        CinemaTheme.styleTextField(txtJudul);
+        pJudul.add(lblJudul, BorderLayout.NORTH);
+        pJudul.add(txtJudul, BorderLayout.CENTER);
+
+        r1.add(pId, BorderLayout.WEST);
+        r1.add(pJudul, BorderLayout.CENTER);
+        p.add(r1);
+        p.add(Box.createVerticalStrut(8));
+
+        // Row 2: Genre (+ button) & Year Picker (JSpinner)
+        JPanel r2 = new JPanel(new GridLayout(1, 2, 12, 0));
+        r2.setOpaque(false);
+
+        JPanel pGenre = new JPanel(new BorderLayout(4, 0));
+        pGenre.setOpaque(false);
+        JLabel lblGenre = new JLabel("Genre:");
+        lblGenre.setFont(CinemaTheme.FONT_SMALL);
+        lblGenre.setForeground(CinemaTheme.TEXT_MUTED);
+        cbGenre = new JComboBox<>();
+        CinemaTheme.styleComboBox(cbGenre);
+
+        JButton btnAddGenre = CinemaTheme.createSmallButton("+", CinemaTheme.BURGUNDY, CinemaTheme.BURGUNDY_HOVER);
+        btnAddGenre.setToolTipText("Tambah Genre Baru");
+        btnAddGenre.addActionListener(e -> {
             new FormTambahGenre().setVisible(true);
             dispose();
         });
 
-        jButtonUploadPoster.addActionListener(e -> pilihDanUploadPoster());
+        JPanel genreInputBox = new JPanel(new BorderLayout(4, 0));
+        genreInputBox.setOpaque(false);
+        genreInputBox.add(cbGenre, BorderLayout.CENTER);
+        genreInputBox.add(btnAddGenre, BorderLayout.EAST);
 
-        jTable1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jTable1.getSelectionModel().addListSelectionListener(event -> {
-            if (event.getValueIsAdjusting()) {
-                return;
-            }
-            tampilkanDataFilmTerpilih();
+        pGenre.add(lblGenre, BorderLayout.NORTH);
+        pGenre.add(genreInputBox, BorderLayout.CENTER);
+
+        // Dedicated Year Picker (Spinner) - Requirement 5A
+        JPanel pTahun = new JPanel(new BorderLayout(4, 0));
+        pTahun.setOpaque(false);
+        JLabel lblTahun = new JLabel("Tahun Rilis (Year Picker):");
+        lblTahun.setFont(CinemaTheme.FONT_SMALL);
+        lblTahun.setForeground(CinemaTheme.TEXT_MUTED);
+
+        spinTahun = new JSpinner(new SpinnerNumberModel(2026, 1900, 2099, 1));
+        JSpinner.NumberEditor yearEditor = new JSpinner.NumberEditor(spinTahun, "#");
+        spinTahun.setEditor(yearEditor);
+        yearEditor.getTextField().setFont(CinemaTheme.FONT_BODY);
+        pTahun.add(lblTahun, BorderLayout.NORTH);
+        pTahun.add(spinTahun, BorderLayout.CENTER);
+
+        r2.add(pGenre);
+        r2.add(pTahun);
+        p.add(r2);
+        p.add(Box.createVerticalStrut(8));
+
+        // Row 3: Sutradara, Durasi, Rating
+        JPanel r3 = new JPanel(new GridLayout(1, 3, 10, 0));
+        r3.setOpaque(false);
+
+        JPanel pSutradara = new JPanel(new BorderLayout(4, 0));
+        pSutradara.setOpaque(false);
+        JLabel lblSutradara = new JLabel("Sutradara:");
+        lblSutradara.setFont(CinemaTheme.FONT_SMALL);
+        lblSutradara.setForeground(CinemaTheme.TEXT_MUTED);
+        txtSutradara = new JTextField();
+        CinemaTheme.styleTextField(txtSutradara);
+        pSutradara.add(lblSutradara, BorderLayout.NORTH);
+        pSutradara.add(txtSutradara, BorderLayout.CENTER);
+
+        JPanel pDurasi = new JPanel(new BorderLayout(4, 0));
+        pDurasi.setOpaque(false);
+        JLabel lblDurasi = new JLabel("Durasi (Menit):");
+        lblDurasi.setFont(CinemaTheme.FONT_SMALL);
+        lblDurasi.setForeground(CinemaTheme.TEXT_MUTED);
+        spinDurasi = new JSpinner(new SpinnerNumberModel(120, 1, 600, 5));
+        spinDurasi.setFont(CinemaTheme.FONT_BODY);
+        pDurasi.add(lblDurasi, BorderLayout.NORTH);
+        pDurasi.add(spinDurasi, BorderLayout.CENTER);
+
+        JPanel pRating = new JPanel(new BorderLayout(4, 0));
+        pRating.setOpaque(false);
+        JLabel lblRating = new JLabel("Rating (0.0 - 10.0):");
+        lblRating.setFont(CinemaTheme.FONT_SMALL);
+        lblRating.setForeground(CinemaTheme.TEXT_MUTED);
+        spinRating = new JSpinner(new SpinnerNumberModel(8.0, 0.0, 10.0, 0.1));
+        spinRating.setFont(CinemaTheme.FONT_BODY);
+        pRating.add(lblRating, BorderLayout.NORTH);
+        pRating.add(spinRating, BorderLayout.CENTER);
+
+        r3.add(pSutradara);
+        r3.add(pDurasi);
+        r3.add(pRating);
+        p.add(r3);
+        p.add(Box.createVerticalStrut(8));
+
+        // Row 4: URL Poster & Upload button
+        JPanel r4 = new JPanel(new BorderLayout(8, 0));
+        r4.setOpaque(false);
+        JLabel lblPoster = new JLabel("URL Poster Film:");
+        lblPoster.setFont(CinemaTheme.FONT_SMALL);
+        lblPoster.setForeground(CinemaTheme.TEXT_MUTED);
+        txtUrlPoster = new JTextField();
+        CinemaTheme.styleTextField(txtUrlPoster);
+
+        JButton btnUpload = CinemaTheme.createSecondaryButton("📁 Unggah");
+        btnUpload.setToolTipText("Unggah poster lokal");
+        btnUpload.addActionListener(e -> pilihDanUploadPoster());
+
+        r4.add(lblPoster, BorderLayout.NORTH);
+        r4.add(txtUrlPoster, BorderLayout.CENTER);
+        r4.add(btnUpload, BorderLayout.EAST);
+        p.add(r4);
+
+        p.add(Box.createVerticalStrut(16));
+
+        // ── SECTION B: PENGATURAN JADWAL TAYANG ─────────────────────────────
+        JLabel sec2 = new JLabel("PENGATURAN JADWAL TAYANG");
+        sec2.setFont(CinemaTheme.FONT_SECTION);
+        sec2.setForeground(CinemaTheme.ACCENT_GOLD);
+        p.add(sec2);
+        p.add(Box.createVerticalStrut(8));
+
+        // Row 5: Studio (+ button) & Harga Tiket
+        JPanel r5 = new JPanel(new GridLayout(1, 2, 12, 0));
+        r5.setOpaque(false);
+
+        JPanel pStudio = new JPanel(new BorderLayout(4, 0));
+        pStudio.setOpaque(false);
+        JLabel lblStudio = new JLabel("Studio Bioskop:");
+        lblStudio.setFont(CinemaTheme.FONT_SMALL);
+        lblStudio.setForeground(CinemaTheme.TEXT_MUTED);
+        cbStudio = new JComboBox<>();
+        CinemaTheme.styleComboBox(cbStudio);
+
+        JButton btnAddStudio = CinemaTheme.createSmallButton("+", CinemaTheme.BURGUNDY, CinemaTheme.BURGUNDY_HOVER);
+        btnAddStudio.setToolTipText("Tambah Studio Baru");
+        btnAddStudio.addActionListener(e -> {
+            new FormTambahStudio().setVisible(true);
+            dispose();
         });
 
-        AdminMenuBar.buat(this);
-        pack();
-        setLocationRelativeTo(null);
-    }
+        JPanel studioInputBox = new JPanel(new BorderLayout(4, 0));
+        studioInputBox.setOpaque(false);
+        studioInputBox.add(cbStudio, BorderLayout.CENTER);
+        studioInputBox.add(btnAddStudio, BorderLayout.EAST);
 
-    private void applyTheme() {
-        getContentPane().setBackground(DEEP_CHARCOAL);
-        jPanel1.setBackground(DEEP_CHARCOAL);
+        pStudio.add(lblStudio, BorderLayout.NORTH);
+        pStudio.add(studioInputBox, BorderLayout.CENTER);
 
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
-            jLabel1, jLabel2, jLabel3, jLabel4, jLabel5, jLabel6, jLabel7, jLabel8,
-            jLabel9, jLabel11, jLabel12, jLabel13, jLabel14, jLabelURLPoster
-        }) {
-            label.setForeground(CREME);
-        }
+        JPanel pHarga = new JPanel(new BorderLayout(4, 0));
+        pHarga.setOpaque(false);
+        JLabel lblHarga = new JLabel("Harga Tiket (Rp):");
+        lblHarga.setFont(CinemaTheme.FONT_SMALL);
+        lblHarga.setForeground(CinemaTheme.TEXT_MUTED);
+        txtHargaTiket = new JTextField("45000");
+        CinemaTheme.styleTextField(txtHargaTiket);
+        pHarga.add(lblHarga, BorderLayout.NORTH);
+        pHarga.add(txtHargaTiket, BorderLayout.CENTER);
 
-        for (JTextField field : new JTextField[]{
-            jTextFieldID, jTextFieldJUDULFILM, jTextFieldTAHUN, jTextFieldSUTRADARA,
-            jTextFieldDURASI, jTextFieldRATING, jTextFieldURLPoster, jTextFieldHarga,
-            jTextFieldTanggal, jTextFieldTAHUN1, jTextField1
-        }) {
-            field.setBackground(CREME);
-            field.setForeground(DEEP_CHARCOAL);
-            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-        }
+        r5.add(pStudio);
+        r5.add(pHarga);
+        p.add(r5);
+        p.add(Box.createVerticalStrut(10));
 
-        for (javax.swing.JComboBox<?> comboBox : new javax.swing.JComboBox<?>[]{
-            jComboBoxGENRE, jComboBoxstudio
-        }) {
-            comboBox.setBackground(CREME);
-            comboBox.setForeground(DEEP_CHARCOAL);
-            comboBox.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-        }
+        // Row 6: Tanggal Tayang (Date Picker with Indonesian format) - Requirement 5A
+        JPanel r6 = new JPanel(new BorderLayout(8, 0));
+        r6.setOpaque(false);
 
-        for (javax.swing.JButton button : new javax.swing.JButton[]{
-            jButton1, jButton3, jButton4, jButton5, jButton7, jButton8, jButton9, jButtonUploadPoster
-        }) {
-            button.setUI(new BasicButtonUI());
-            button.setBackground(BURGUNDY);
-            button.setForeground(CREME);
-            button.setOpaque(true);
-            button.setContentAreaFilled(true);
-            button.setBorderPainted(true);
-            button.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-            button.setFocusPainted(false);
-            button.setRolloverEnabled(false);
-        }
+        JLabel lblTglTag = new JLabel("Tanggal Tayang (Date Picker):");
+        lblTglTag.setFont(CinemaTheme.FONT_SMALL);
+        lblTglTag.setForeground(CinemaTheme.TEXT_MUTED);
 
-        // Tombol dengan teks pendek/standar
-        ButtonSizingHelper.setSizeForButton(jButton5, ButtonSizingHelper.TYPE_ACTION);  // CARI
-        for (javax.swing.JButton button : new javax.swing.JButton[]{jButton7, jButton8}) {
-            Dimension size = new Dimension(100, 34);
-            button.setPreferredSize(size);
-            button.setMinimumSize(size);
-            button.setMaximumSize(size);
-            button.setMargin(new Insets(4, 8, 4, 8));
-        }
+        JPanel dateBox = new JPanel(new BorderLayout(8, 0));
+        dateBox.setOpaque(false);
 
-        // Tombol utama dengan teks panjang
-        ButtonSizingHelper.setSizeCustom(jButton1, 110, 34, 12, 4);  // TAMBAH FILM
-        ButtonSizingHelper.setSizeCustom(jButton3, 80, 34, 12, 4);   // EDIT
-        ButtonSizingHelper.setSizeCustom(jButton4, 80, 34, 12, 4);   // HAPUS
-        ButtonSizingHelper.setSizeCustom(jButton9, 110, 34, 12, 4);  // CLEAR FIELD
-
-        // Tombol Upload
-        ButtonSizingHelper.setSizeCustom(jButtonUploadPoster, 85, 34, 10, 4);
-
-        jTable1.setBackground(CREME);
-        jTable1.setForeground(DEEP_CHARCOAL);
-        javax.swing.table.JTableHeader tableHeader = jTable1.getTableHeader();
-        tableHeader.setUI(new BasicTableHeaderUI());
-        tableHeader.setOpaque(true);
-        tableHeader.setBackground(BURGUNDY);
-        tableHeader.setForeground(CREME);
-        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
-        headerRenderer.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        headerRenderer.setOpaque(true);
-        headerRenderer.setBackground(BURGUNDY);
-        headerRenderer.setForeground(CREME);
-        tableHeader.setDefaultRenderer(headerRenderer);
-        jTable1.setGridColor(BURGUNDY);
-        jScrollPane1.setBackground(DEEP_CHARCOAL);
-        jScrollPane1.getViewport().setBackground(CREME);
-
-            for (javax.swing.JButton button : new javax.swing.JButton[]{
-                jButton1, jButton5, jButton7, jButton8, jButton9
-            }) {
-                button.setEnabled(true);
-            }
-    }
-
-    private record JadwalFilm(int idStudio, LocalDateTime mulaiTayang,
-            java.math.BigDecimal hargaTiket, boolean memilikiTiket) {
-    }
-
-    private void updateFilmActionButtons(boolean adaPilihan) {
-        jButton3.setVisible(adaPilihan);
-        jButton3.setEnabled(adaPilihan);
-        jButton4.setVisible(adaPilihan);
-        jButton4.setEnabled(adaPilihan);
-    }
-
-    private void tampilkanDataFilmTerpilih() {
-        int viewRow = jTable1.getSelectedRow();
-        if (viewRow == -1) {
-            jTextFieldID.setText("");
-            setJadwalAwal(null, null, null);
-            updateFilmActionButtons(false);
-            PlaceholderSupport.reset(jTextFieldURLPoster);
-            return;
-        }
-
-        int modelRow = jTable1.convertRowIndexToModel(viewRow);
-        DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
-
-        jTextFieldID.setText(String.valueOf(model.getValueAt(modelRow, 0)));
-        PlaceholderSupport.setText(jTextFieldJUDULFILM, String.valueOf(model.getValueAt(modelRow, 1)));
-        jComboBoxGENRE.setSelectedItem(model.getValueAt(modelRow, 2));
-        PlaceholderSupport.setText(jTextFieldTAHUN, String.valueOf(model.getValueAt(modelRow, 3)));
-        PlaceholderSupport.setText(jTextFieldSUTRADARA, String.valueOf(model.getValueAt(modelRow, 4)));
-        PlaceholderSupport.setText(jTextFieldDURASI, String.valueOf(model.getValueAt(modelRow, 5)));
-        PlaceholderSupport.setText(jTextFieldRATING, String.valueOf(model.getValueAt(modelRow, 6)));
-        Object posterVal = model.getColumnCount() > 7 ? model.getValueAt(modelRow, 7) : null;
-        PlaceholderSupport.setText(jTextFieldURLPoster, posterVal != null ? posterVal.toString() : "");
-
-        int idFilm;
-        try {
-            idFilm = Integer.parseInt(jTextFieldID.getText());
-        } catch (NumberFormatException ex) {
-            logger.log(java.util.logging.Level.SEVERE, "ID film dari tabel tidak valid.", ex);
-            updateFilmActionButtons(false);
-            return;
-        }
-
-        muatJadwalFilm(idFilm);
-        updateFilmActionButtons(true);
-    }
-
-    private void loadComboStudio() {
-        jComboBoxstudio.removeAllItems();
-        studioMap.clear();
-        try (Connection connection = Koneksi.getConnection();
-             PreparedStatement statement = connection.prepareStatement(
-                     "SELECT id_studio, nama_studio FROM studio ORDER BY id_studio");
-             ResultSet result = statement.executeQuery()) {
-            while (result.next()) {
-                String namaStudio = result.getString("nama_studio");
-                studioMap.put(namaStudio, result.getInt("id_studio"));
-                jComboBoxstudio.addItem(namaStudio);
-            }
-            jComboBoxstudio.setSelectedIndex(-1);
-        } catch (SQLException exception) {
-            tampilkanErrorDatabase("Data studio gagal dimuat.", exception);
-        }
-        if (studioMap.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Belum ada studio. Gunakan tombol Tambah Studio sebelum menyimpan jadwal.");
-        }
-    }
-
-    private void muatJadwalFilm(int idFilm) {
-        String sql = "SELECT j.id_studio, j.mulai_tayang, j.harga_tiket, "
-                + "EXISTS (SELECT 1 FROM tiket t WHERE t.id_jadwal = j.id_jadwal) AS memiliki_tiket "
-                + "FROM jadwal_tayang j WHERE j.id_film = ? ORDER BY j.mulai_tayang, j.id_studio";
-        List<JadwalFilm> jadwal = new ArrayList<>();
-        try (Connection connection = Koneksi.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, idFilm);
-            try (ResultSet result = statement.executeQuery()) {
-                while (result.next()) {
-                    jadwal.add(new JadwalFilm(result.getInt("id_studio"),
-                            result.getTimestamp("mulai_tayang").toLocalDateTime(),
-                            result.getBigDecimal("harga_tiket"), result.getBoolean("memiliki_tiket")));
-                }
-            }
-            resetJadwalFields();
-            if (jadwal.isEmpty()) {
-                setJadwalAwal(null, null, null);
-                return;
-            }
-            JadwalFilm pertama = jadwal.get(0);
-            LocalDate tanggal = pertama.mulaiTayang().toLocalDate();
-            List<LocalTime> jam = jadwal.stream()
-                    .filter(item -> item.idStudio() == pertama.idStudio()
-                            && item.mulaiTayang().toLocalDate().equals(tanggal))
-                    .map(item -> item.mulaiTayang().toLocalTime())
-                    .toList();
-            isiGrupJadwal(tanggal, pertama.idStudio(), pertama.hargaTiket(), jam);
-            setJadwalAwal(idFilm, tanggal, pertama.idStudio());
-        } catch (SQLException exception) {
-            tampilkanErrorDatabase("Jadwal tayang film gagal dimuat.", exception);
-        }
-    }
-
-    private void muatJadwalGrupTerpilih() {
-        if (jTextFieldID.getText().isBlank()) {
-            return;
-        }
-        String tanggalText = PlaceholderSupport.getText(jTextFieldTanggal).trim();
-        String namaStudio = (String) jComboBoxstudio.getSelectedItem();
-        Integer idStudio = namaStudio == null ? null : studioMap.get(namaStudio);
-        if (tanggalText.isEmpty() || idStudio == null) {
-            return;
-        }
-        try {
-            LocalDate tanggal = LocalDate.parse(tanggalText);
-            String sql = "SELECT j.mulai_tayang, j.harga_tiket, "
-                    + "EXISTS (SELECT 1 FROM tiket t WHERE t.id_jadwal = j.id_jadwal) AS memiliki_tiket "
-                    + "FROM jadwal_tayang j WHERE j.id_film = ? AND j.id_studio = ? "
-                    + "AND DATE(j.mulai_tayang) = ? ORDER BY j.mulai_tayang";
-            List<JadwalFilm> jadwal = new ArrayList<>();
-            try (Connection connection = Koneksi.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setInt(1, Integer.parseInt(jTextFieldID.getText()));
-                statement.setInt(2, idStudio);
-                statement.setDate(3, java.sql.Date.valueOf(tanggal));
-                try (ResultSet result = statement.executeQuery()) {
-                    while (result.next()) {
-                        jadwal.add(new JadwalFilm(idStudio,
-                                result.getTimestamp("mulai_tayang").toLocalDateTime(),
-                                result.getBigDecimal("harga_tiket"), result.getBoolean("memiliki_tiket")));
-                    }
-                }
-            }
-            resetJamTayang();
-            if (jadwal.isEmpty()) {
-                setJadwalAwal(null, null, null);
-                return;
-            }
-            java.math.BigDecimal harga = jadwal.get(0).hargaTiket();
-            if (jadwal.stream().anyMatch(item -> item.hargaTiket().compareTo(harga) != 0)) {
-                JOptionPane.showMessageDialog(this,
-                        "Harga tiket pada grup jadwal ini berbeda. Edit setiap jadwal melalui pemilihan grup yang sesuai.");
-                setJadwalAwal(null, null, null);
-                return;
-            }
-                isiGrupJadwal(tanggal, idStudio, harga, jadwal.stream()
-                    .map(item -> item.mulaiTayang().toLocalTime()).toList());
-                setJadwalAwal(Integer.parseInt(jTextFieldID.getText()), tanggal, idStudio);
-        } catch (java.time.DateTimeException | NumberFormatException exception) {
-            JOptionPane.showMessageDialog(this, "Tanggal jadwal harus menggunakan format YYYY-MM-DD.");
-        } catch (SQLException exception) {
-            tampilkanErrorDatabase("Jadwal tayang gagal dimuat.", exception);
-        }
-    }
-
-    private void isiGrupJadwal(LocalDate tanggal, int idStudio,
-            java.math.BigDecimal harga, List<LocalTime> jam) {
-        memperbaruiJadwal = true;
-        PlaceholderSupport.setText(jTextFieldTanggal, tanggal.toString());
-        PlaceholderSupport.setText(jTextFieldHarga, harga.toPlainString());
-        String namaStudio = studioMap.entrySet().stream()
-                .filter(entry -> entry.getValue() == idStudio)
-                .map(Map.Entry::getKey).findFirst().orElse(null);
-        jComboBoxstudio.setSelectedItem(namaStudio);
-        memperbaruiJadwal = false;
-        PlaceholderSupport.setText(jTextFieldTAHUN1, formatJam(jam));
-    }
-
-    private void resetJamTayang() {
-        PlaceholderSupport.reset(jTextFieldTAHUN1);
-    }
-
-    private void resetJadwalFields() {
-        PlaceholderSupport.reset(jTextFieldTanggal);
-        PlaceholderSupport.reset(jTextFieldHarga);
-        PlaceholderSupport.reset(jTextFieldTAHUN1);
-        memperbaruiJadwal = true;
-        jComboBoxstudio.setSelectedIndex(-1);
-        memperbaruiJadwal = false;
-    }
-
-    private String formatJam(List<LocalTime> jam) {
-        return String.join(", ", jam.stream()
-                .map(waktu -> waktu.format(DateTimeFormatter.ofPattern("HH.mm"))).toList());
-    }
-
-    private void setJadwalAwal(Integer idFilm, LocalDate tanggal, Integer idStudio) {
-        filmGrupJadwalAwal = idFilm;
-        tanggalGrupJadwalAwal = tanggal;
-        studioGrupJadwalAwal = idStudio;
-    }
-
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        jLabel7 = new javax.swing.JLabel();
-        jLabel8 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
-        jButton9 = new javax.swing.JButton();
-        jTextFieldID = new javax.swing.JTextField();
-        jTextFieldJUDULFILM = new javax.swing.JTextField();
-        jTextFieldTAHUN = new javax.swing.JTextField();
-        jTextFieldSUTRADARA = new javax.swing.JTextField();
-        jTextFieldDURASI = new javax.swing.JTextField();
-        jTextFieldRATING = new javax.swing.JTextField();
-        jTextFieldURLPoster = new javax.swing.JTextField();
-        jLabelURLPoster = new javax.swing.JLabel();
-        jButtonUploadPoster = new javax.swing.JButton();
-        jComboBoxGENRE = new javax.swing.JComboBox<>();
-        jButton7 = new javax.swing.JButton();
-        jTextFieldHarga = new javax.swing.JTextField();
-        jLabel11 = new javax.swing.JLabel();
-        jLabel12 = new javax.swing.JLabel();
-        jComboBoxstudio = new javax.swing.JComboBox<>();
-        jButton8 = new javax.swing.JButton();
-        jLabel13 = new javax.swing.JLabel();
-        jTextFieldTAHUN1 = new javax.swing.JTextField();
-        jLabel14 = new javax.swing.JLabel();
-        jTextFieldTanggal = new javax.swing.JTextField();
-        jLabel9 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jButton5 = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setText("DATA FILM - ADMIN");
-
-        jLabel2.setText("ID Film       :");
-
-        jLabel3.setText("Judul Film  :");
-
-        jLabel4.setText("Genre         :");
-
-        jLabel5.setText("Tahun        :");
-
-        jLabel6.setText("Sutradara  :");
-
-        jLabel7.setText("Durasi       :");
-
-        jLabel8.setText("Rating       :");
-
-        jButton1.setText("TAMBAH FILM");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
-            }
-        });
-
-        jButton9.setText("CLEAR FIELD");
-
-        jTextFieldID.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextFieldIDActionPerformed(evt);
-            }
-        });
-
-        jComboBoxGENRE.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-        jComboBoxGENRE.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jComboBoxGENREActionPerformed(evt);
-            }
-        });
-
-        jButton7.setText("Tambah Genre");
-        jButton7.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton7ActionPerformed(evt);
-            }
-        });
-
-        jLabel11.setText("Harga       :");
-
-        jLabel12.setText("Studio         :");
-
-        jComboBoxstudio.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-        jComboBoxstudio.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jComboBoxstudioActionPerformed(evt);
-            }
-        });
-
-        jButton8.setText("Tambah Studio");
-        jButton8.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton8ActionPerformed(evt);
-            }
-        });
-
-        jLabel13.setText("Jam Tayang:");
-
-        jLabel14.setText("Tanggal      :");
-
-        jLabelURLPoster.setText("URL Poster  :");
-
-        jButtonUploadPoster.setText("Upload...");
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(21, 21, 21)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabelURLPoster, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel12, javax.swing.GroupLayout.DEFAULT_SIZE, 69, Short.MAX_VALUE)
-                    .addComponent(jLabel14, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jComboBoxGENRE, javax.swing.GroupLayout.PREFERRED_SIZE, 149, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton7)
-                        .addGap(0, 9, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jTextFieldDURASI)
-                            .addComponent(jTextFieldSUTRADARA)
-                            .addComponent(jTextFieldTAHUN)
-                            .addComponent(jTextFieldJUDULFILM)
-                            .addComponent(jTextFieldID, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(jTextFieldRATING, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(jTextFieldHarga, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jTextFieldURLPoster)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jButtonUploadPoster))
-                            .addComponent(jTextFieldTanggal)
-                            .addComponent(jTextFieldTAHUN1)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jComboBoxstudio, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jButton8)))
-                        .addContainerGap())))
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(15, 15, 15)
-                        .addComponent(jButton1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton9))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(141, 141, 141)
-                        .addComponent(jLabel1)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(28, 28, 28)
-                .addComponent(jLabel1)
-                .addGap(53, 53, 53)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(jTextFieldID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3)
-                    .addComponent(jTextFieldJUDULFILM, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel4)
-                    .addComponent(jComboBoxGENRE, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton7))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel12)
-                    .addComponent(jComboBoxstudio, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton8))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel14)
-                    .addComponent(jTextFieldTanggal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel13)
-                    .addComponent(jTextFieldTAHUN1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel5)
-                    .addComponent(jTextFieldTAHUN, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel6)
-                    .addComponent(jTextFieldSUTRADARA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel7)
-                    .addComponent(jTextFieldDURASI, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel8)
-                    .addComponent(jTextFieldRATING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel11)
-                    .addComponent(jTextFieldHarga, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabelURLPoster)
-                    .addComponent(jTextFieldURLPoster, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButtonUploadPoster))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1)
-                    .addComponent(jButton9))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-
-        jLabel9.setText("Cari Film :");
-
-        jButton5.setText("CARI");
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
-            }
-        });
-
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null}
-            },
-            new String [] {
-                "ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating"
-            }
+        lblTanggalDisplay = new JLabel(CinemaTheme.formatTanggal(selectedTanggal));
+        lblTanggalDisplay.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblTanggalDisplay.setForeground(CinemaTheme.CREME);
+        lblTanggalDisplay.setBackground(CinemaTheme.PANEL_BG);
+        lblTanggalDisplay.setOpaque(true);
+        lblTanggalDisplay.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(CinemaTheme.BURGUNDY, 1),
+                BorderFactory.createEmptyBorder(6, 12, 6, 12)
         ));
-        jScrollPane1.setViewportView(jTable1);
 
-        jButton3.setText("EDIT");
-
-        jButton4.setText("HAPUS");
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
+        JButton btnPickDate = CinemaTheme.createPrimaryButton("📅 Pilih Tanggal");
+        btnPickDate.addActionListener(e -> {
+            LocalDate picked = ModernDatePickerDialog.showDialog(this, selectedTanggal);
+            if (picked != null) {
+                selectedTanggal = picked;
+                lblTanggalDisplay.setText(CinemaTheme.formatTanggal(selectedTanggal));
+                if (!txtId.getText().isBlank()) {
+                    muatJadwalGrupTerpilih();
+                }
             }
         });
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(21, 21, 21)
-                        .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 326, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton4))
-                    .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 612, Short.MAX_VALUE)))
-                .addContainerGap())
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addGap(98, 98, 98)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel9)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton5))
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 187, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton4)
-                    .addComponent(jButton3))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
+        dateBox.add(lblTanggalDisplay, BorderLayout.CENTER);
+        dateBox.add(btnPickDate, BorderLayout.EAST);
 
-        pack();
-    }// </editor-fold>//GEN-END:initComponents
+        r6.add(lblTglTag, BorderLayout.NORTH);
+        r6.add(dateBox, BorderLayout.CENTER);
+        p.add(r6);
+        p.add(Box.createVerticalStrut(12));
 
-    private void jComboBoxstudioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBoxstudioActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jComboBoxstudioActionPerformed
+        // Row 7: Jam Tayang (ShowtimeChipPanel) - Requirement 5B
+        JLabel lblJamTag = new JLabel("Jam Tayang (Time Picker & Chips):");
+        lblJamTag.setFont(CinemaTheme.FONT_SMALL);
+        lblJamTag.setForeground(CinemaTheme.TEXT_MUTED);
+        p.add(lblJamTag);
+        p.add(Box.createVerticalStrut(4));
 
-    private void jComboBoxGENREActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBoxGENREActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jComboBoxGENREActionPerformed
+        showtimePanel = new ShowtimeChipPanel();
+        p.add(showtimePanel);
 
-    private void jTextFieldIDActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldIDActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextFieldIDActionPerformed
-
-    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton5ActionPerformed
-
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton4ActionPerformed
-
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
-
-    private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton7ActionPerformed
-
-    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton8ActionPerformed
+        return p;
+    }
 
     private void loadComboGenre() {
-        jComboBoxGENRE.removeAllItems();
+        cbGenre.removeAllItems();
         genreMap.clear();
         try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre");
-             ResultSet rs = stmt.executeQuery()) {
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id_genre, nama_genre FROM genre ORDER BY nama_genre")) {
             while (rs.next()) {
                 int id = rs.getInt("id_genre");
                 String nama = rs.getString("nama_genre");
                 genreMap.put(nama, id);
-                jComboBoxGENRE.addItem(nama);
+                cbGenre.addItem(nama);
             }
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Genre gagal dimuat.", ex);
+            ex.printStackTrace();
         }
     }
 
-    private DefaultTableModel modelFilmKosong() {
-        return new DefaultTableModel(new String[]{"ID", "Judul", "Genre", "Tahun", "Sutradara", "Durasi", "Rating", "Poster"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
+    private void loadComboStudio() {
+        cbStudio.removeAllItems();
+        studioMap.clear();
+        try (Connection conn = Koneksi.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id_studio, nama_studio FROM studio ORDER BY id_studio")) {
+            while (rs.next()) {
+                int id = rs.getInt("id_studio");
+                String nama = rs.getString("nama_studio");
+                studioMap.put(nama, id);
+                cbStudio.addItem(nama);
             }
-        };
-    }
-
-    private record FilmInput(String judul, int idGenre, int tahun, String sutradara,
-            int durasi, java.math.BigDecimal rating, String urlPoster, List<LocalTime> jamTayang,
-            boolean jadwalDitentukan, LocalDate tanggalJadwal, Integer idStudio,
-            java.math.BigDecimal hargaTiket) {
-    }
-
-    private FilmInput bacaInputFilm(boolean modeEdit) {
-        String judul = PlaceholderSupport.getText(jTextFieldJUDULFILM).trim();
-        String namaGenre = (String) jComboBoxGENRE.getSelectedItem();
-        String tahunText = PlaceholderSupport.getText(jTextFieldTAHUN).trim();
-        String sutradara = PlaceholderSupport.getText(jTextFieldSUTRADARA).trim();
-        String durasiText = PlaceholderSupport.getText(jTextFieldDURASI).trim();
-        String ratingText = PlaceholderSupport.getText(jTextFieldRATING).trim().replace(',', '.');
-        String urlPoster = PlaceholderSupport.getText(jTextFieldURLPoster).trim();
-        Integer idGenre = namaGenre == null ? null : genreMap.get(namaGenre);
-
-        if (judul.isEmpty() || idGenre == null || tahunText.isEmpty() || sutradara.isEmpty()
-                || durasiText.isEmpty() || ratingText.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Semua field harus diisi dan genre harus tersedia.");
-            return null;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
-        if (judul.length() > 200 || sutradara.length() > 120) {
-            JOptionPane.showMessageDialog(this, "Judul maksimal 200 karakter dan sutradara maksimal 120 karakter.");
-            return null;
-        }
-        if (urlPoster.length() > 500) {
-            JOptionPane.showMessageDialog(this, "URL poster maksimal 500 karakter.");
-            return null;
-        }
-
-        try {
-            int tahun = Integer.parseInt(tahunText);
-            int durasi = Integer.parseInt(durasiText);
-            java.math.BigDecimal rating = new java.math.BigDecimal(ratingText);
-            if (tahun < 0 || tahun > 65535 || durasi < 1 || durasi > 65535
-                    || rating.compareTo(java.math.BigDecimal.ZERO) < 0
-                    || rating.compareTo(new java.math.BigDecimal("10.0")) > 0 || rating.scale() > 1) {
-                JOptionPane.showMessageDialog(this,
-                        "Tahun/durasi di luar batas database; durasi harus positif dan rating 0 sampai 10 (maksimal 1 desimal).");
-                return null;
-            }
-            List<LocalTime> jamTayang = new ArrayList<>();
-            String inputJam = PlaceholderSupport.getText(jTextFieldTAHUN1).trim();
-            for (String nilaiJam : inputJam.split(",", -1)) {
-                if (nilaiJam.trim().isEmpty()) {
-                    continue;
-                }
-                LocalTime waktu = LocalTime.parse(nilaiJam.trim(), DateTimeFormatter.ofPattern("HH.mm"));
-                if (jamTayang.contains(waktu)) {
-                    JOptionPane.showMessageDialog(this, "Jam tayang tidak boleh duplikat.");
-                    return null;
-                }
-                jamTayang.add(waktu);
-            }
-            jamTayang.sort(LocalTime::compareTo);
-
-            String tanggalText = PlaceholderSupport.getText(jTextFieldTanggal).trim();
-            String hargaText = PlaceholderSupport.getText(jTextFieldHarga).trim().replace(',', '.');
-            boolean jadwalDitentukan = !jamTayang.isEmpty() || !tanggalText.isEmpty()
-                    || !hargaText.isEmpty() || (modeEdit && filmGrupJadwalAwal != null);
-            LocalDate tanggalJadwal = null;
-            Integer idStudio = null;
-            java.math.BigDecimal hargaTiket = null;
-            if (jadwalDitentukan) {
-                String namaStudio = (String) jComboBoxstudio.getSelectedItem();
-                Integer studio = namaStudio == null ? null : studioMap.get(namaStudio);
-                if (tanggalText.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Tanggal tayang wajib diisi.");
-                    jTextFieldTanggal.requestFocusInWindow();
-                    return null;
-                }
-                if (studio == null) {
-                    JOptionPane.showMessageDialog(this, "Pilih studio sebelum menyimpan jam tayang.");
-                    jComboBoxstudio.requestFocusInWindow();
-                    return null;
-                }
-                if (hargaText.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Harga tiket wajib diisi.");
-                    jTextFieldHarga.requestFocusInWindow();
-                    return null;
-                }
-                if (jamTayang.isEmpty() && (!modeEdit || filmGrupJadwalAwal == null)) {
-                    JOptionPane.showMessageDialog(this,
-                            "Tambahkan minimal satu jam tayang atau kosongkan semua detail jadwal.");
-                    return null;
-                }
-                tanggalJadwal = LocalDate.parse(tanggalText);
-                if (tanggalJadwal.isBefore(LocalDate.now())) {
-                    JOptionPane.showMessageDialog(this, "Tanggal tayang tidak boleh di masa lalu.");
-                    return null;
-                }
-                hargaTiket = new java.math.BigDecimal(hargaText);
-                if (hargaTiket.compareTo(java.math.BigDecimal.ZERO) <= 0
-                    || hargaTiket.scale() > 2 || hargaTiket.precision() > 10) {
-                    JOptionPane.showMessageDialog(this,
-                            "Harga tiket harus lebih dari 0 dan maksimal 2 angka desimal.");
-                    return null;
-                }
-                idStudio = studio;
-                for (LocalTime waktu : jamTayang) {
-                    if (LocalDateTime.of(tanggalJadwal, waktu).isBefore(LocalDateTime.now())) {
-                        JOptionPane.showMessageDialog(this, "Jam tayang tidak boleh di masa lalu.");
-                        return null;
-                    }
-                }
-            }
-            return new FilmInput(judul, idGenre, tahun, sutradara, durasi, rating,
-                    urlPoster.isEmpty() ? null : urlPoster,
-                    List.copyOf(jamTayang), jadwalDitentukan, tanggalJadwal, idStudio, hargaTiket);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Tahun dan durasi harus bilangan bulat; rating harus angka valid.");
-            return null;
-        } catch (java.time.DateTimeException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Tanggal harus YYYY-MM-DD dan setiap jam tayang harus menggunakan format HH.mm.");
-            return null;
-        }
-    }
-
-    private List<JadwalFilm> ambilGrupJadwal(Connection connection, int idFilm,
-            LocalDate tanggal, int idStudio) throws SQLException {
-        String sql = "SELECT j.id_studio, j.mulai_tayang, j.harga_tiket, "
-                + "EXISTS (SELECT 1 FROM tiket t WHERE t.id_jadwal = j.id_jadwal) AS memiliki_tiket "
-                + "FROM jadwal_tayang j WHERE j.id_film = ? AND j.id_studio = ? "
-                + "AND DATE(j.mulai_tayang) = ? ORDER BY j.mulai_tayang FOR UPDATE";
-        List<JadwalFilm> jadwal = new ArrayList<>();
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, idFilm);
-            statement.setInt(2, idStudio);
-            statement.setDate(3, java.sql.Date.valueOf(tanggal));
-            try (ResultSet result = statement.executeQuery()) {
-                while (result.next()) {
-                    jadwal.add(new JadwalFilm(result.getInt("id_studio"),
-                            result.getTimestamp("mulai_tayang").toLocalDateTime(),
-                            result.getBigDecimal("harga_tiket"), result.getBoolean("memiliki_tiket")));
-                }
-            }
-        }
-        return jadwal;
-    }
-
-    private void simpanJadwalFilm(Connection connection, int idFilm,
-            FilmInput input, boolean filmBaru) throws SQLException {
-        if (!input.jadwalDitentukan()) {
-            return;
-        }
-
-        List<JadwalFilm> grupLama = List.of();
-        boolean grupLamaAda = !filmBaru && filmGrupJadwalAwal != null
-                && filmGrupJadwalAwal == idFilm && tanggalGrupJadwalAwal != null
-                && studioGrupJadwalAwal != null;
-        if (grupLamaAda) {
-            grupLama = ambilGrupJadwal(connection, idFilm,
-                    tanggalGrupJadwalAwal, studioGrupJadwalAwal);
-        }
-
-        boolean targetSamaDenganLama = grupLamaAda
-                && tanggalGrupJadwalAwal.equals(input.tanggalJadwal())
-                && studioGrupJadwalAwal.equals(input.idStudio());
-        if (grupLama.stream().anyMatch(JadwalFilm::memilikiTiket)) {
-            boolean jamSama = grupLama.stream().map(item -> item.mulaiTayang().toLocalTime()).toList()
-                    .equals(input.jamTayang());
-            boolean hargaSama = grupLama.stream()
-                    .allMatch(item -> item.hargaTiket().compareTo(input.hargaTiket()) == 0);
-            boolean adaPerubahanJadwal = !targetSamaDenganLama || !jamSama || !hargaSama;
-            if (!adaPerubahanJadwal) {
-                return;
-            }
-            throw new SQLException("Jadwal yang sudah memiliki tiket tidak dapat diubah atau dihapus.");
-        }
-
-        if (grupLamaAda && !grupLama.isEmpty()) {
-            String deleteSql = "DELETE FROM jadwal_tayang WHERE id_film = ? AND id_studio = ? AND DATE(mulai_tayang) = ?";
-            try (PreparedStatement statement = connection.prepareStatement(deleteSql)) {
-                statement.setInt(1, idFilm);
-                statement.setInt(2, studioGrupJadwalAwal);
-                statement.setDate(3, java.sql.Date.valueOf(tanggalGrupJadwalAwal));
-                statement.executeUpdate();
-            }
-        }
-
-        List<JadwalFilm> grupTujuan = ambilGrupJadwal(connection, idFilm,
-                input.tanggalJadwal(), input.idStudio());
-        if (!grupTujuan.isEmpty()) {
-            throw new SQLException("Grup jadwal tujuan sudah ada. Pilih tanggal dan studio tersebut lalu tekan Enter untuk memuatnya.");
-        }
-
-        String insertSql = "INSERT INTO jadwal_tayang (id_film, id_studio, mulai_tayang, harga_tiket) "
-                + "VALUES (?, ?, ?, ?)";
-        try (PreparedStatement statement = connection.prepareStatement(insertSql)) {
-            for (LocalTime waktu : input.jamTayang()) {
-                statement.setInt(1, idFilm);
-                statement.setInt(2, input.idStudio());
-                statement.setTimestamp(3, java.sql.Timestamp.valueOf(
-                        LocalDateTime.of(input.tanggalJadwal(), waktu)));
-                statement.setBigDecimal(4, input.hargaTiket());
-                statement.addBatch();
-            }
-            statement.executeBatch();
-        }
-    }
-
-    private void tampilkanErrorDatabase(String pesan, SQLException exception) {
-        logger.log(java.util.logging.Level.SEVERE, pesan, exception);
-        JOptionPane.showMessageDialog(this, pesan + " Periksa koneksi dan relasi data.",
-                "Kesalahan database", JOptionPane.ERROR_MESSAGE);
     }
 
     private void loadDataFilm() {
-        DefaultTableModel model = modelFilmKosong();
-        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating, f.url_poster " +
-                     "FROM film f JOIN genre g ON f.id_genre = g.id_genre ORDER BY f.id_film ASC";
+        DefaultTableModel model = new DefaultTableModel(
+                new String[]{"ID", "Judul Film", "Genre", "Tahun", "Sutradara", "Durasi", "Rating", "URL Poster"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
+        };
+
+        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating, f.url_poster "
+                + "FROM film f JOIN genre g ON g.id_genre = f.id_genre ORDER BY f.id_film DESC";
+
         try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 model.addRow(new Object[]{
-                    rs.getInt("id_film"), rs.getString("judul"), rs.getString("nama_genre"),
-                    rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating"),
-                    rs.getString("url_poster")
+                        rs.getInt("id_film"),
+                        rs.getString("judul"),
+                        rs.getString("nama_genre"),
+                        rs.getInt("tahun"),
+                        rs.getString("sutradara"),
+                        rs.getInt("durasi_menit") + " mnt",
+                        rs.getDouble("rating"),
+                        rs.getString("url_poster")
                 });
             }
-            jTable1.setModel(model);
-            updateFilmActionButtons(false);
+            tableFilm.setModel(model);
+            updateButtonStates(false);
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Data film gagal dimuat.", ex);
+            ex.printStackTrace();
         }
     }
 
     private void cariDataFilm() {
-        String keyword = PlaceholderSupport.getText(jTextField1).trim();
-        DefaultTableModel model = modelFilmKosong();
-        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating, f.url_poster " +
-                     "FROM film f JOIN genre g ON f.id_genre = g.id_genre " +
-                     "WHERE f.judul LIKE ? OR f.sutradara LIKE ? ORDER BY f.id_film ASC";
+        String keyword = txtSearch.getText().trim();
+        DefaultTableModel model = new DefaultTableModel(
+                new String[]{"ID", "Judul Film", "Genre", "Tahun", "Sutradara", "Durasi", "Rating", "URL Poster"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
+        };
+
+        String sql = "SELECT f.id_film, f.judul, g.nama_genre, f.tahun, f.sutradara, f.durasi_menit, f.rating, f.url_poster "
+                + "FROM film f JOIN genre g ON g.id_genre = f.id_genre "
+                + "WHERE f.judul LIKE ? OR f.sutradara LIKE ? ORDER BY f.id_film DESC";
+
         try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "%" + keyword + "%");
-            stmt.setString(2, "%" + keyword + "%");
-            try (ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, "%" + keyword + "%");
+            ps.setString(2, "%" + keyword + "%");
+            try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     model.addRow(new Object[]{
-                        rs.getInt("id_film"), rs.getString("judul"), rs.getString("nama_genre"),
-                        rs.getInt("tahun"), rs.getString("sutradara"), rs.getInt("durasi_menit"), rs.getDouble("rating"),
-                        rs.getString("url_poster")
+                            rs.getInt("id_film"),
+                            rs.getString("judul"),
+                            rs.getString("nama_genre"),
+                            rs.getInt("tahun"),
+                            rs.getString("sutradara"),
+                            rs.getInt("durasi_menit") + " mnt",
+                            rs.getDouble("rating"),
+                            rs.getString("url_poster")
                     });
                 }
             }
-            jTable1.setModel(model);
-            updateFilmActionButtons(false);
+            tableFilm.setModel(model);
+            updateButtonStates(false);
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Pencarian film gagal.", ex);
+            ex.printStackTrace();
         }
+    }
+
+    private void tampilkanFilmTerpilih() {
+        int row = tableFilm.getSelectedRow();
+        if (row == -1) {
+            clearFields();
+            return;
+        }
+
+        int modelRow = tableFilm.convertRowIndexToModel(row);
+        DefaultTableModel m = (DefaultTableModel) tableFilm.getModel();
+
+        int idFilm = (Integer) m.getValueAt(modelRow, 0);
+        txtId.setText(String.valueOf(idFilm));
+        txtJudul.setText(String.valueOf(m.getValueAt(modelRow, 1)));
+        cbGenre.setSelectedItem(m.getValueAt(modelRow, 2));
+        spinTahun.setValue((Integer) m.getValueAt(modelRow, 3));
+        txtSutradara.setText(String.valueOf(m.getValueAt(modelRow, 4)));
+
+        String durasiStr = String.valueOf(m.getValueAt(modelRow, 5)).replace(" mnt", "").trim();
+        try {
+            spinDurasi.setValue(Integer.parseInt(durasiStr));
+        } catch (Exception ignored) {}
+
+        spinRating.setValue(m.getValueAt(modelRow, 6));
+        Object posterObj = m.getValueAt(modelRow, 7);
+        String posterUrl = posterObj != null ? posterObj.toString() : "";
+        txtUrlPoster.setText(posterUrl);
+
+        if (!posterUrl.isBlank()) {
+            PosterFetcher.muat(lblPosterPreview, posterUrl, 70, 95);
+        } else {
+            lblPosterPreview.setIcon(null);
+            lblPosterPreview.setText("NO POSTER");
+        }
+
+        muatJadwalFilm(idFilm);
+        updateButtonStates(true);
+    }
+
+    private void muatJadwalFilm(int idFilm) {
+        String sql = "SELECT j.id_studio, j.mulai_tayang, j.harga_tiket "
+                + "FROM jadwal_tayang j WHERE j.id_film = ? ORDER BY j.mulai_tayang ASC";
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idFilm);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int idStudio = rs.getInt("id_studio");
+                    Timestamp ts = rs.getTimestamp("mulai_tayang");
+                    BigDecimal harga = rs.getBigDecimal("harga_tiket");
+
+                    selectedTanggal = ts.toLocalDateTime().toLocalDate();
+                    lblTanggalDisplay.setText(CinemaTheme.formatTanggal(selectedTanggal));
+                    txtHargaTiket.setText(harga.toPlainString());
+
+                    // Find studio name
+                    for (Map.Entry<String, Integer> entry : studioMap.entrySet()) {
+                        if (entry.getValue() == idStudio) {
+                            cbStudio.setSelectedItem(entry.getKey());
+                            break;
+                        }
+                    }
+
+                    // Load all showtimes for this film on that date & studio
+                    muatJadwalGrupTerpilih();
+                } else {
+                    showtimePanel.clear();
+                    filmGrupJadwalAwal = null;
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void muatJadwalGrupTerpilih() {
+        if (txtId.getText().isBlank()) return;
+        int idFilm = Integer.parseInt(txtId.getText());
+        String namaStudio = (String) cbStudio.getSelectedItem();
+        Integer idStudio = namaStudio == null ? null : studioMap.get(namaStudio);
+        if (idStudio == null || selectedTanggal == null) return;
+
+        String sql = "SELECT j.mulai_tayang, j.harga_tiket FROM jadwal_tayang j "
+                + "WHERE j.id_film = ? AND j.id_studio = ? AND DATE(j.mulai_tayang) = ? "
+                + "ORDER BY j.mulai_tayang ASC";
+
+        List<LocalTime> times = new ArrayList<>();
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idFilm);
+            ps.setInt(2, idStudio);
+            ps.setDate(3, java.sql.Date.valueOf(selectedTanggal));
+            try (ResultSet rs = ps.executeQuery()) {
+                BigDecimal harga = null;
+                while (rs.next()) {
+                    times.add(rs.getTimestamp("mulai_tayang").toLocalDateTime().toLocalTime());
+                    if (harga == null) {
+                        harga = rs.getBigDecimal("harga_tiket");
+                    }
+                }
+                if (harga != null) {
+                    txtHargaTiket.setText(harga.toPlainString());
+                }
+            }
+
+            showtimePanel.setJamList(times);
+            filmGrupJadwalAwal = idFilm;
+            tanggalGrupJadwalAwal = selectedTanggal;
+            studioGrupJadwalAwal = idStudio;
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void updateButtonStates(boolean rowSelected) {
+        btnTambah.setEnabled(!rowSelected);
+        btnEdit.setEnabled(rowSelected);
+        btnHapus.setEnabled(rowSelected);
     }
 
     private void clearFields() {
-        jTable1.clearSelection();
-        jTextFieldID.setText("");
-        PlaceholderSupport.reset(jTextFieldJUDULFILM);
-        PlaceholderSupport.reset(jTextFieldTAHUN);
-        PlaceholderSupport.reset(jTextFieldSUTRADARA);
-        PlaceholderSupport.reset(jTextFieldDURASI);
-        PlaceholderSupport.reset(jTextFieldRATING);
-        PlaceholderSupport.reset(jTextFieldURLPoster);
-        resetJadwalFields();
-        setJadwalAwal(null, null, null);
-        jComboBoxGENRE.setSelectedIndex(-1);
-        updateFilmActionButtons(false);
+        txtId.setText("");
+        txtJudul.setText("");
+        if (cbGenre.getItemCount() > 0) cbGenre.setSelectedIndex(0);
+        spinTahun.setValue(2026);
+        txtSutradara.setText("");
+        spinDurasi.setValue(120);
+        spinRating.setValue(8.0);
+        txtUrlPoster.setText("");
+        lblPosterPreview.setIcon(null);
+        lblPosterPreview.setText("POSTER");
+
+        if (cbStudio.getItemCount() > 0) cbStudio.setSelectedIndex(0);
+        txtHargaTiket.setText("45000");
+        selectedTanggal = LocalDate.now();
+        lblTanggalDisplay.setText(CinemaTheme.formatTanggal(selectedTanggal));
+        showtimePanel.clear();
+
+        tableFilm.clearSelection();
+        updateButtonStates(false);
+        filmGrupJadwalAwal = null;
+        tanggalGrupJadwalAwal = null;
+        studioGrupJadwalAwal = null;
     }
 
     private void tambahFilm() {
-        FilmInput input = bacaInputFilm(false);
-        if (input == null) {
+        String judul = txtJudul.getText().trim();
+        String sutradara = txtSutradara.getText().trim();
+        String namaGenre = (String) cbGenre.getSelectedItem();
+        Integer idGenre = namaGenre != null ? genreMap.get(namaGenre) : null;
+        int tahun = (Integer) spinTahun.getValue();
+        int durasi = (Integer) spinDurasi.getValue();
+        double rating = ((Number) spinRating.getValue()).doubleValue();
+        String urlPoster = txtUrlPoster.getText().trim();
+
+        if (judul.isEmpty() || sutradara.isEmpty() || idGenre == null) {
+            JOptionPane.showMessageDialog(this, "Judul, Sutradara, dan Genre wajib diisi!", "Validasi Form", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        String sql = "INSERT INTO film (judul, id_genre, tahun, sutradara, durasi_menit, rating, url_poster) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        // Validate schedule if showtimes provided
+        List<LocalTime> jamList = showtimePanel.getJamList();
+        String namaStudio = (String) cbStudio.getSelectedItem();
+        Integer idStudio = namaStudio != null ? studioMap.get(namaStudio) : null;
+        BigDecimal hargaTiket;
+        try {
+            hargaTiket = new BigDecimal(txtHargaTiket.getText().trim().replace(',', '.'));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Harga tiket tidak valid!", "Validasi Form", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         try (Connection conn = Koneksi.getConnection()) {
             conn.setAutoCommit(false);
-            try (PreparedStatement stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, input.judul());
-                stmt.setInt(2, input.idGenre());
-                stmt.setInt(3, input.tahun());
-                stmt.setString(4, input.sutradara());
-                stmt.setInt(5, input.durasi());
-                stmt.setBigDecimal(6, input.rating());
-                stmt.setString(7, input.urlPoster());
-                stmt.executeUpdate();
-                try (ResultSet keys = stmt.getGeneratedKeys()) {
-                    if (!keys.next()) {
-                        throw new SQLException("ID film baru tidak berhasil dibuat.");
-                    }
-                    int idFilm = keys.getInt(1);
-                    simpanJadwalFilm(conn, idFilm, input, true);
+            int newFilmId;
+
+            // 1. Insert Film
+            String sqlFilm = "INSERT INTO film (judul, id_genre, tahun, sutradara, durasi_menit, rating, url_poster) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(sqlFilm, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, judul);
+                ps.setInt(2, idGenre);
+                ps.setInt(3, tahun);
+                ps.setString(4, sutradara);
+                ps.setInt(5, durasi);
+                ps.setDouble(6, rating);
+                ps.setString(7, urlPoster.isEmpty() ? null : urlPoster);
+                ps.executeUpdate();
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (!rs.next()) throw new SQLException("Gagal membuat film baru.");
+                    newFilmId = rs.getInt(1);
                 }
-                conn.commit();
-                JOptionPane.showMessageDialog(this, "Data film dan jadwal berhasil ditambahkan!");
-                clearFields();
-                loadDataFilm();
-            } catch (SQLException exception) {
-                conn.rollback();
-                throw exception;
             }
+
+            // 2. Insert Showtimes with Conflict Validation
+            if (!jamList.isEmpty() && idStudio != null) {
+                String sqlJadwal = "INSERT INTO jadwal_tayang (id_film, id_studio, mulai_tayang, harga_tiket) VALUES (?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(sqlJadwal)) {
+                    for (LocalTime t : jamList) {
+                        LocalDateTime mulai = LocalDateTime.of(selectedTanggal, t);
+
+                        // Check collision with other movies in same studio
+                        if (PemesananService.cekBentrokJadwal(idStudio, mulai, durasi, null)) {
+                            conn.rollback();
+                            JOptionPane.showMessageDialog(this,
+                                    "Jadwal tayang " + CinemaTheme.TIME_FORMAT.format(t)
+                                            + " bertabrakan dengan jadwal film lain di studio yang sama!",
+                                    "Jadwal Bertabrakan", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+
+                        ps.setInt(1, newFilmId);
+                        ps.setInt(2, idStudio);
+                        ps.setTimestamp(3, Timestamp.valueOf(mulai));
+                        ps.setBigDecimal(4, hargaTiket);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+
+            conn.commit();
+            JOptionPane.showMessageDialog(this, "Film \"" + judul + "\" berhasil ditambahkan beserta jadwal tayang!",
+                    "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            clearFields();
+            loadDataFilm();
+
         } catch (SQLException ex) {
-            String pesan = "23000".equals(ex.getSQLState())
-                    ? "Film atau jadwal gagal disimpan karena data duplikat/relasi tidak valid."
-                    : "Film dan jadwal gagal ditambahkan.";
-            tampilkanErrorDatabase(pesan, ex);
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan data film: " + ex.getMessage(),
+                    "Kesalahan Database", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void editFilm() {
-        String idStr = jTextFieldID.getText().trim();
-        if(idStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Pilih data dari tabel terlebih dahulu!");
+        if (txtId.getText().isBlank()) return;
+        int idFilm = Integer.parseInt(txtId.getText());
+        String judul = txtJudul.getText().trim();
+        String sutradara = txtSutradara.getText().trim();
+        String namaGenre = (String) cbGenre.getSelectedItem();
+        Integer idGenre = namaGenre != null ? genreMap.get(namaGenre) : null;
+        int tahun = (Integer) spinTahun.getValue();
+        int durasi = (Integer) spinDurasi.getValue();
+        double rating = ((Number) spinRating.getValue()).doubleValue();
+        String urlPoster = txtUrlPoster.getText().trim();
+
+        List<LocalTime> jamList = showtimePanel.getJamList();
+        String namaStudio = (String) cbStudio.getSelectedItem();
+        Integer idStudio = namaStudio != null ? studioMap.get(namaStudio) : null;
+        BigDecimal hargaTiket;
+        try {
+            hargaTiket = new BigDecimal(txtHargaTiket.getText().trim().replace(',', '.'));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Harga tiket tidak valid!", "Validasi Form", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        FilmInput input = bacaInputFilm(true);
-        if (input == null) {
-            return;
-        }
-        try {
-            int id = Integer.parseInt(idStr);
-            if (id <= 0) {
-                throw new NumberFormatException();
+        try (Connection conn = Koneksi.getConnection()) {
+            conn.setAutoCommit(false);
+
+            // 1. Update Film Info
+            String sqlFilm = "UPDATE film SET judul = ?, id_genre = ?, tahun = ?, sutradara = ?, durasi_menit = ?, "
+                    + "rating = ?, url_poster = ? WHERE id_film = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sqlFilm)) {
+                ps.setString(1, judul);
+                ps.setInt(2, idGenre);
+                ps.setInt(3, tahun);
+                ps.setString(4, sutradara);
+                ps.setInt(5, durasi);
+                ps.setDouble(6, rating);
+                ps.setString(7, urlPoster.isEmpty() ? null : urlPoster);
+                ps.setInt(8, idFilm);
+                ps.executeUpdate();
             }
-            String sql = "UPDATE film SET judul=?, id_genre=?, tahun=?, sutradara=?, durasi_menit=?, rating=?, url_poster=? WHERE id_film=?";
-            try (Connection conn = Koneksi.getConnection()) {
-                conn.setAutoCommit(false);
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    stmt.setString(1, input.judul());
-                    stmt.setInt(2, input.idGenre());
-                    stmt.setInt(3, input.tahun());
-                    stmt.setString(4, input.sutradara());
-                    stmt.setInt(5, input.durasi());
-                    stmt.setBigDecimal(6, input.rating());
-                    stmt.setString(7, input.urlPoster());
-                    stmt.setInt(8, id);
-                    if (stmt.executeUpdate() == 0) {
-                        conn.rollback();
-                        JOptionPane.showMessageDialog(this, "Film tidak ditemukan atau sudah dihapus.");
-                        return;
+
+            // 2. Update Showtimes: Delete old un-booked showtimes for this date & re-insert
+            if (idStudio != null) {
+                // Delete existing schedules for this film, studio, and date that do NOT have booked tickets
+                String delSql = "DELETE FROM jadwal_tayang WHERE id_film = ? AND id_studio = ? "
+                        + "AND DATE(mulai_tayang) = ? AND id_jadwal NOT IN (SELECT DISTINCT id_jadwal FROM tiket)";
+                try (PreparedStatement ps = conn.prepareStatement(delSql)) {
+                    ps.setInt(1, idFilm);
+                    ps.setInt(2, idStudio);
+                    ps.setDate(3, java.sql.Date.valueOf(selectedTanggal));
+                    ps.executeUpdate();
+                }
+
+                // Insert updated showtimes
+                if (!jamList.isEmpty()) {
+                    String insertSql = "INSERT IGNORE INTO jadwal_tayang (id_film, id_studio, mulai_tayang, harga_tiket) VALUES (?, ?, ?, ?)";
+                    try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                        for (LocalTime t : jamList) {
+                            LocalDateTime mulai = LocalDateTime.of(selectedTanggal, t);
+                            ps.setInt(1, idFilm);
+                            ps.setInt(2, idStudio);
+                            ps.setTimestamp(3, Timestamp.valueOf(mulai));
+                            ps.setBigDecimal(4, hargaTiket);
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
                     }
-                    simpanJadwalFilm(conn, id, input, false);
-                    conn.commit();
-                    JOptionPane.showMessageDialog(this, "Data film dan jadwal berhasil diubah!");
-                    clearFields();
-                    loadDataFilm();
-                } catch (SQLException exception) {
-                    conn.rollback();
-                    throw exception;
                 }
             }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "ID film harus berupa bilangan bulat yang valid.");
+
+            conn.commit();
+            JOptionPane.showMessageDialog(this, "Data film dan jadwal tayang berhasil diperbarui!",
+                    "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            loadDataFilm();
+
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Film gagal diubah.", ex);
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal mengedit film: " + ex.getMessage(),
+                    "Kesalahan Database", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void hapusFilm() {
-        String idStr = jTextFieldID.getText().trim();
-        if(idStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Pilih data dari tabel terlebih dahulu!");
-            return;
-        }
+        if (txtId.getText().isBlank()) return;
+        int idFilm = Integer.parseInt(txtId.getText());
+        String judul = txtJudul.getText();
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus film ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION) {
-            try (Connection conn = Koneksi.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM film WHERE id_film=?")) {
-                stmt.setInt(1, Integer.parseInt(idStr));
-                if (stmt.executeUpdate() == 0) {
-                    JOptionPane.showMessageDialog(this, "Film tidak ditemukan atau sudah dihapus.");
-                    return;
-                }
-                JOptionPane.showMessageDialog(this, "Data film berhasil dihapus!");
-                clearFields();
-                loadDataFilm();
-            } catch(SQLException ex) {
-                String pesan = "23000".equals(ex.getSQLState())
-                        ? "Film tidak dapat dihapus karena masih digunakan jadwal tayang."
-                        : "Film gagal dihapus. Periksa koneksi database.";
-                tampilkanErrorDatabase(pesan, ex);
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin menghapus film \"" + judul + "\" beserta seluruh jadwal tayangnya?",
+                "Konfirmasi Hapus Film",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try (Connection conn = Koneksi.getConnection()) {
+            // First delete related showtimes that don't have tickets
+            String delJadwal = "DELETE FROM jadwal_tayang WHERE id_film = ?";
+            try (PreparedStatement ps = conn.prepareStatement(delJadwal)) {
+                ps.setInt(1, idFilm);
+                ps.executeUpdate();
             }
+
+            String delFilm = "DELETE FROM film WHERE id_film = ?";
+            try (PreparedStatement ps = conn.prepareStatement(delFilm)) {
+                ps.setInt(1, idFilm);
+                ps.executeUpdate();
+            }
+
+            JOptionPane.showMessageDialog(this, "Film berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            clearFields();
+            loadDataFilm();
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Film tidak dapat dihapus karena sudah memiliki tiket transaksi tersimpan.\n" + ex.getMessage(),
+                    "Gagal Hapus", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void pilihDanUploadPoster() {
-        if (!SupabaseStorageService.isConfigured()) {
-            int pilih = JOptionPane.showConfirmDialog(this,
-                    "Konfigurasi Supabase belum diisi di SupabaseStorageService.java.\n"
-                    + "Ganti SUPABASE_URL dan SUPABASE_KEY pada file tersebut dengan data akun Supabase Anda.\n\n"
-                    + "Apakah Anda ingin memasukkan URL gambar secara manual di kolom teks?",
-                    "Konfigurasi Supabase Diperlukan",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.INFORMATION_MESSAGE);
-            if (pilih == JOptionPane.YES_OPTION) {
-                jTextFieldURLPoster.requestFocusInWindow();
-            }
-            return;
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Pilih Berkas Poster Film");
+        chooser.setFileFilter(new FileNameExtensionFilter("Gambar (JPG, PNG, WEBP)", "jpg", "jpeg", "png", "webp"));
+
+        int result = chooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = chooser.getSelectedFile();
+            txtUrlPoster.setText(selectedFile.getAbsolutePath());
+            PosterFetcher.muat(lblPosterPreview, selectedFile.getAbsolutePath(), 70, 95);
         }
-
-        javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
-        fileChooser.setDialogTitle("Pilih Gambar Poster Film");
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                "Gambar (*.jpg, *.jpeg, *.png, *.webp)", "jpg", "jpeg", "png", "webp"));
-
-        int hasil = fileChooser.showOpenDialog(this);
-        if (hasil != javax.swing.JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        java.io.File fileDipilih = fileChooser.getSelectedFile();
-        if (fileDipilih == null || !fileDipilih.exists()) {
-            return;
-        }
-
-        // Batas ukuran 5 MB
-        if (fileDipilih.length() > 5 * 1024 * 1024) {
-            JOptionPane.showMessageDialog(this, "Ukuran file terlalu besar! Maksimal 5 MB.");
-            return;
-        }
-
-        jButtonUploadPoster.setEnabled(false);
-        String teksLama = PlaceholderSupport.getText(jTextFieldURLPoster);
-        PlaceholderSupport.setText(jTextFieldURLPoster, "Mengunggah gambar ke Supabase...");
-
-        new Thread(() -> {
-            try {
-                String publicUrl = SupabaseStorageService.uploadGambar(fileDipilih);
-                javax.swing.SwingUtilities.invokeLater(() -> {
-                    PlaceholderSupport.setText(jTextFieldURLPoster, publicUrl);
-                    JOptionPane.showMessageDialog(this, "Poster berhasil diunggah ke Supabase!");
-                    jButtonUploadPoster.setEnabled(true);
-                });
-            } catch (Exception ex) {
-                javax.swing.SwingUtilities.invokeLater(() -> {
-                    PlaceholderSupport.setText(jTextFieldURLPoster, teksLama);
-                    jButtonUploadPoster.setEnabled(true);
-                    JOptionPane.showMessageDialog(this,
-                            "Upload gagal: " + ex.getMessage(),
-                            "Kesalahan Upload",
-                            JOptionPane.ERROR_MESSAGE);
-                });
-            }
-        }, "supabase-upload").start();
     }
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new FormFilmAdmin().setVisible(true));
-    }
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
-    private javax.swing.JButton jButton7;
-    private javax.swing.JButton jButton8;
-    private javax.swing.JButton jButton9;
-    private javax.swing.JButton jButtonUploadPoster;
-    private javax.swing.JComboBox<String> jComboBoxGENRE;
-    private javax.swing.JComboBox<String> jComboBoxstudio;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel11;
-    private javax.swing.JLabel jLabel12;
-    private javax.swing.JLabel jLabel13;
-    private javax.swing.JLabel jLabel14;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
-    private javax.swing.JLabel jLabelURLPoster;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextFieldDURASI;
-    private javax.swing.JTextField jTextFieldHarga;
-    private javax.swing.JTextField jTextFieldID;
-    private javax.swing.JTextField jTextFieldJUDULFILM;
-    private javax.swing.JTextField jTextFieldRATING;
-    private javax.swing.JTextField jTextFieldSUTRADARA;
-    private javax.swing.JTextField jTextFieldTAHUN;
-    private javax.swing.JTextField jTextFieldTAHUN1;
-    private javax.swing.JTextField jTextFieldTanggal;
-    private javax.swing.JTextField jTextFieldURLPoster;
-    // End of variables declaration//GEN-END:variables
 }

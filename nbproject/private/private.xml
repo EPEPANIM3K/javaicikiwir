@@ -2,28 +2,6 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/FormFilmAdmin.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/Menu.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/FormTambahGenre.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/Koneksi/Koneksi.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/CheckOut.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/Login.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/PilihFilm.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/Register.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/StrukFilm.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/BeliTiket.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/FormTambahStudio.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/AplikasiDataFilm.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/PemesananService.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/MenuUser.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/AdminMenuBar.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/CetakStruk.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/LoginService.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/PlaceholderSupport.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasidatafilm/AplikasiDataFilm.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/PosterFetcher.java</file>
-            <file>file:/D:/Khusus%20Download/AplikasiDataFilm/src/aplikasdatafilm/SupabaseStorageService.java</file>
-        </group>
+        <group/>
     </open-files>
 </project-private>

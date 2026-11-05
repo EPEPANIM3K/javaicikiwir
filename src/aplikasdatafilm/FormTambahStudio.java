@@ -1,421 +1,331 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package aplikasdatafilm;
 
 import Koneksi.Koneksi;
-import java.awt.Color;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import javax.swing.BorderFactory;
-import javax.swing.JOptionPane;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.plaf.basic.BasicButtonUI;
-import javax.swing.plaf.basic.BasicTableHeaderUI;
+import java.awt.*;
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-/**
- *
- * @author WINDOWS 11
- */
-public class FormTambahStudio extends javax.swing.JFrame {
-    
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormTambahStudio.class.getName());
-    private static final Color BURGUNDY = new Color(0x6D1F2B);
-    private static final Color CREME = new Color(0xF5EDE5);
-    private static final Color DEEP_CHARCOAL = new Color(0x171416);
 
-    /**
-     * Creates new form FormTambahGenre
-     */
+/**
+ * Modern Cinema Studio Management Screen (1280x720).
+ * Standardized layout, clear typography, validation, and table search.
+ */
+public class FormTambahStudio extends JFrame {
+
+    private JTextField txtNamaStudio;
+    private JTextField txtSearch;
+    private JTable tableStudio;
+    private Integer selectedIdStudio = null;
+
+    private JButton btnTambah;
+    private JButton btnEdit;
+    private JButton btnHapus;
+    private JButton btnClear;
+
     public FormTambahStudio() {
-        initComponents();
-        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        PlaceholderSupport.install(jTextFieldCARI, "Cari nama studio");
-        PlaceholderSupport.install(jTextFieldGENRE, "Masukkan nama studio");
+        CinemaTheme.standardizeFrame(this, "TIKET KU — Manajemen Studio Bioskop");
+        buildUI();
         loadDataStudio();
-        jButtonCARI.addActionListener(e -> cariDataStudio());
-        jButtonTAMBAH.addActionListener(e -> tambahStudio());
-        jButtonHAPUS.addActionListener(e -> hapusStudio());
-        jButtonKEMBALI.addActionListener(e -> {
+    }
+
+    private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(CinemaTheme.BG_DARK);
+
+        // Header
+        JPanel header = CinemaTheme.createStaffHeader(this, "Manajemen Studio Bioskop", "ADMINISTRATOR", () -> {
+            dispose();
+            new Login().setVisible(true);
+        });
+        root.add(header, BorderLayout.NORTH);
+
+        // Main Content (2 Columns)
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setOpaque(false);
+        content.setBorder(new EmptyBorder(20, 36, 20, 36));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // ── LEFT: FORM INPUT CARD ───────────────────────────────────────────
+        gbc.gridx = 0;
+        gbc.weightx = 0.40;
+        gbc.insets = new Insets(0, 0, 0, 20);
+
+        JPanel formCard = CinemaTheme.createCard();
+        formCard.setLayout(new BoxLayout(formCard, BoxLayout.Y_AXIS));
+
+        JLabel lblSec = new JLabel("TAMBAH / EDIT STUDIO");
+        lblSec.setFont(CinemaTheme.FONT_SUBTITLE);
+        lblSec.setForeground(CinemaTheme.CREME);
+        formCard.add(lblSec);
+
+        JLabel lblSecSub = new JLabel("Kelola nama studio bioskop dan ketersediaan ruangan.");
+        lblSecSub.setFont(CinemaTheme.FONT_SMALL);
+        lblSecSub.setForeground(CinemaTheme.TEXT_MUTED);
+        formCard.add(lblSecSub);
+
+        formCard.add(Box.createVerticalStrut(24));
+
+        JLabel lblNama = new JLabel("Nama Studio (contoh: Studio 1, IMAX, Premiere):");
+        lblNama.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblNama.setForeground(CinemaTheme.CREME);
+        formCard.add(lblNama);
+
+        formCard.add(Box.createVerticalStrut(6));
+
+        txtNamaStudio = new JTextField();
+        CinemaTheme.styleTextField(txtNamaStudio);
+        txtNamaStudio.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        txtNamaStudio.setPreferredSize(new Dimension(300, 40));
+        txtNamaStudio.addActionListener(e -> {
+            if (selectedIdStudio == null) tambahStudio(); else editStudio();
+        });
+        formCard.add(txtNamaStudio);
+
+        formCard.add(Box.createVerticalStrut(24));
+
+        // Buttons
+        JPanel btnGrid = new JPanel(new GridLayout(2, 2, 10, 10));
+        btnGrid.setOpaque(false);
+        btnGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+
+        btnTambah = CinemaTheme.createSuccessButton("+ Tambah");
+        btnTambah.addActionListener(e -> tambahStudio());
+
+        btnEdit = CinemaTheme.createPrimaryButton("Simpan Edit");
+        btnEdit.addActionListener(e -> editStudio());
+
+        btnHapus = CinemaTheme.createDangerButton("Hapus");
+        btnHapus.addActionListener(e -> hapusStudio());
+
+        btnClear = CinemaTheme.createSecondaryButton("Reset Form");
+        btnClear.addActionListener(e -> clearForm());
+
+        btnGrid.add(btnTambah);
+        btnGrid.add(btnEdit);
+        btnGrid.add(btnHapus);
+        btnGrid.add(btnClear);
+        formCard.add(btnGrid);
+
+        formCard.add(Box.createVerticalGlue());
+
+        // Back to Film Admin
+        JButton btnBack = CinemaTheme.createSecondaryButton("← Kembali ke Manajemen Film");
+        btnBack.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnBack.addActionListener(e -> {
             dispose();
             new FormFilmAdmin().setVisible(true);
         });
-        jTableGENRE.getSelectionModel().addListSelectionListener(event -> {
-            if (!event.getValueIsAdjusting() && jTableGENRE.getSelectedRow() != -1) {
-                int row = jTableGENRE.getSelectedRow();
-                PlaceholderSupport.setText(jTextFieldGENRE, jTableGENRE.getValueAt(row, 1).toString());
+        formCard.add(btnBack);
+
+        content.add(formCard, gbc);
+
+        // ── RIGHT: TABLE CARD ──────────────────────────────────────────────
+        gbc.gridx = 1;
+        gbc.weightx = 0.60;
+        gbc.insets = new Insets(0, 0, 0, 0);
+
+        JPanel tableCard = CinemaTheme.createCard();
+        tableCard.setLayout(new BorderLayout(0, 12));
+
+        // Search Bar
+        JPanel searchBar = new JPanel(new BorderLayout(10, 0));
+        searchBar.setOpaque(false);
+
+        JLabel lblCari = new JLabel("🔍 Cari Studio:");
+        lblCari.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblCari.setForeground(CinemaTheme.CREME);
+        searchBar.add(lblCari, BorderLayout.WEST);
+
+        txtSearch = new JTextField();
+        CinemaTheme.styleTextField(txtSearch);
+        txtSearch.addActionListener(e -> cariDataStudio());
+        searchBar.add(txtSearch, BorderLayout.CENTER);
+
+        JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        searchActions.setOpaque(false);
+        JButton btnCari = CinemaTheme.createPrimaryButton("Cari");
+        btnCari.addActionListener(e -> cariDataStudio());
+        JButton btnAll = CinemaTheme.createSecondaryButton("Semua");
+        btnAll.addActionListener(e -> {
+            txtSearch.setText("");
+            loadDataStudio();
+        });
+        searchActions.add(btnCari);
+        searchActions.add(btnAll);
+        searchBar.add(searchActions, BorderLayout.EAST);
+
+        tableCard.add(searchBar, BorderLayout.NORTH);
+
+        // Table
+        tableStudio = new JTable();
+        CinemaTheme.styleTable(tableStudio);
+        tableStudio.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tableStudio.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && tableStudio.getSelectedRow() != -1) {
+                int row = tableStudio.getSelectedRow();
+                selectedIdStudio = (Integer) tableStudio.getValueAt(row, 0);
+                txtNamaStudio.setText(String.valueOf(tableStudio.getValueAt(row, 1)));
+                updateBtnState(true);
             }
         });
+
+        JScrollPane scroll = new JScrollPane(tableStudio);
+        scroll.setBorder(BorderFactory.createLineBorder(CinemaTheme.CARD_BORDER, 1));
+        scroll.getViewport().setBackground(CinemaTheme.CARD_BG);
+        tableCard.add(scroll, BorderLayout.CENTER);
+
+        content.add(tableCard, gbc);
+        root.add(content, BorderLayout.CENTER);
+
         AdminMenuBar.buat(this);
-        applyTheme();
+        getContentPane().add(root);
+        updateBtnState(false);
     }
 
-    private void applyTheme() {
-        getContentPane().setBackground(DEEP_CHARCOAL);
-        jPanel1.setBackground(DEEP_CHARCOAL);
-
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
-            jLabel1, jLabel2, jLabel3
-        }) {
-            label.setForeground(CREME);
-        }
-
-        for (javax.swing.JTextField field : new javax.swing.JTextField[]{
-            jTextFieldCARI, jTextFieldGENRE
-        }) {
-            field.setBackground(CREME);
-            field.setForeground(DEEP_CHARCOAL);
-            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-        }
-
-        for (javax.swing.JButton button : new javax.swing.JButton[]{
-            jButtonTAMBAH, jButtonCARI, jButtonHAPUS, jButtonKEMBALI
-        }) {
-            button.setUI(new BasicButtonUI());
-            button.setBackground(BURGUNDY);
-            button.setForeground(CREME);
-            button.setOpaque(true);
-            button.setContentAreaFilled(true);
-            button.setBorderPainted(true);
-            button.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-            button.setFocusPainted(false);
-            button.setRolloverEnabled(false);
-            button.setEnabled(true);
-        }
-
-        // Atur ukuran tombol
-        ButtonSizingHelper.setSizeForButton(jButtonCARI, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButtonTAMBAH, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButtonHAPUS, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButtonKEMBALI, ButtonSizingHelper.TYPE_ACTION);
-
-        jTableGENRE.setBackground(CREME);
-        jTableGENRE.setForeground(DEEP_CHARCOAL);
-        javax.swing.table.JTableHeader tableHeader = jTableGENRE.getTableHeader();
-        tableHeader.setUI(new BasicTableHeaderUI());
-        tableHeader.setOpaque(true);
-        tableHeader.setBackground(BURGUNDY);
-        tableHeader.setForeground(CREME);
-        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
-        headerRenderer.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        headerRenderer.setOpaque(true);
-        headerRenderer.setBackground(BURGUNDY);
-        headerRenderer.setForeground(CREME);
-        tableHeader.setDefaultRenderer(headerRenderer);
-        jTableGENRE.setGridColor(BURGUNDY);
-        jScrollPane1.setBackground(DEEP_CHARCOAL);
-        jScrollPane1.getViewport().setBackground(CREME);
+    private void updateBtnState(boolean rowSelected) {
+        btnTambah.setEnabled(!rowSelected);
+        btnEdit.setEnabled(rowSelected);
+        btnHapus.setEnabled(rowSelected);
     }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jTextFieldCARI = new javax.swing.JTextField();
-        jTextFieldGENRE = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
-        jButtonTAMBAH = new javax.swing.JButton();
-        jButtonCARI = new javax.swing.JButton();
-        jButtonHAPUS = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTableGENRE = new javax.swing.JTable();
-        jButtonKEMBALI = new javax.swing.JButton();
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setText("DATA STUDIO");
-
-        jLabel3.setText("Nama Studio Baru     :");
-
-        jTextFieldCARI.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextFieldCARIActionPerformed(evt);
-            }
-        });
-
-        jTextFieldGENRE.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextFieldGENREActionPerformed(evt);
-            }
-        });
-
-        jLabel2.setText("Cari Studio:");
-
-        jButtonTAMBAH.setText("TAMBAH");
-        jButtonTAMBAH.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonTAMBAHActionPerformed(evt);
-            }
-        });
-
-        jButtonCARI.setText("Cari");
-
-        jButtonHAPUS.setText("HAPUS");
-        jButtonHAPUS.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonHAPUSActionPerformed(evt);
-            }
-        });
-
-        jTableGENRE.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null}
-            },
-            new String [] {
-                "ID", "Nama Studio"
-            }
-        ));
-        jScrollPane1.setViewportView(jTableGENRE);
-
-        jButtonKEMBALI.setText("KEMBALI");
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addGap(11, 11, 11)
-                                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(6, 6, 6)
-                                    .addComponent(jTextFieldGENRE))
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                    .addGap(0, 0, Short.MAX_VALUE)
-                                    .addComponent(jButtonTAMBAH)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(jButtonHAPUS))
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                    .addComponent(jTextFieldCARI, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(jButtonCARI, javax.swing.GroupLayout.PREFERRED_SIZE, 57, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(0, 7, Short.MAX_VALUE)))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 375, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(jButtonKEMBALI)))
-                .addContainerGap())
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(93, 93, 93))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(35, 35, 35)
-                .addComponent(jLabel1)
-                .addGap(57, 57, 57)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3)
-                    .addComponent(jTextFieldGENRE, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(30, 30, 30)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButtonTAMBAH)
-                    .addComponent(jButtonHAPUS))
-                .addGap(61, 61, 61)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(jTextFieldCARI, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButtonCARI))
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 28, Short.MAX_VALUE)
-                .addComponent(jButtonKEMBALI)
-                .addGap(15, 15, 15))
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-
-        pack();
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void jTextFieldCARIActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldCARIActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextFieldCARIActionPerformed
-
-    private void jTextFieldGENREActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldGENREActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextFieldGENREActionPerformed
-
-    private void jButtonTAMBAHActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTAMBAHActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButtonTAMBAHActionPerformed
-
-    private void jButtonHAPUSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonHAPUSActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButtonHAPUSActionPerformed
+    private void clearForm() {
+        txtNamaStudio.setText("");
+        selectedIdStudio = null;
+        tableStudio.clearSelection();
+        updateBtnState(false);
+    }
 
     private void loadDataStudio() {
-        DefaultTableModel model = modelStudioKosong();
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id_studio, nama_studio FROM studio ORDER BY id_studio ASC");
-             ResultSet rs = stmt.executeQuery()) {
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID Studio", "Nama Studio"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
 
+        try (Connection conn = Koneksi.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id_studio, nama_studio FROM studio ORDER BY id_studio ASC")) {
             while (rs.next()) {
                 model.addRow(new Object[]{rs.getInt("id_studio"), rs.getString("nama_studio")});
             }
-            jTableGENRE.setModel(model);
+            tableStudio.setModel(model);
+            clearForm();
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Data studio gagal dimuat.", ex);
+            ex.printStackTrace();
         }
     }
 
-    private DefaultTableModel modelStudioKosong() {
-        return new DefaultTableModel(new String[]{"ID", "Nama Studio"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-    }
-
-    private void tampilkanErrorDatabase(String pesan, SQLException exception) {
-        logger.log(java.util.logging.Level.SEVERE, pesan, exception);
-        JOptionPane.showMessageDialog(this, pesan + " Periksa koneksi database.",
-                "Kesalahan database", JOptionPane.ERROR_MESSAGE);
-    }
-
     private void cariDataStudio() {
-        String keyword = PlaceholderSupport.getText(jTextFieldCARI).trim();
-        DefaultTableModel model = modelStudioKosong();
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id_studio, nama_studio FROM studio WHERE nama_studio LIKE ? ORDER BY id_studio ASC")) {
+        String keyword = txtSearch.getText().trim();
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID Studio", "Nama Studio"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
 
-            stmt.setString(1, "%" + keyword + "%");
-            try (ResultSet rs = stmt.executeQuery()) {
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id_studio, nama_studio FROM studio WHERE nama_studio LIKE ? ORDER BY id_studio ASC")) {
+            ps.setString(1, "%" + keyword + "%");
+            try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     model.addRow(new Object[]{rs.getInt("id_studio"), rs.getString("nama_studio")});
                 }
             }
-            jTableGENRE.setModel(model);
+            tableStudio.setModel(model);
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Pencarian studio gagal.", ex);
+            ex.printStackTrace();
         }
     }
 
     private void tambahStudio() {
-        String namaStudio = PlaceholderSupport.getText(jTextFieldGENRE).trim();
-        if (namaStudio.isEmpty() || namaStudio.length() > 30) {
-            JOptionPane.showMessageDialog(this, "Nama studio wajib diisi dan maksimal 30 karakter.");
+        String nama = txtNamaStudio.getText().trim();
+        if (nama.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama studio tidak boleh kosong!", "Validasi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try (Connection conn = Koneksi.getConnection()) {
+            conn.setAutoCommit(false);
+            int newStudioId;
+            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO studio (nama_studio) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, nama);
+                ps.executeUpdate();
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (!rs.next()) throw new SQLException("Gagal membuat studio baru.");
+                    newStudioId = rs.getInt(1);
+                }
+            }
+
+            // Inisialisasi otomatis 20 kursi bioskop standar (A1 s.d. E4) untuk studio baru
+            String insertKursi = "INSERT INTO kursi (id_studio, kode_kursi) VALUES (?, ?)";
+            try (PreparedStatement psKursi = conn.prepareStatement(insertKursi)) {
+                String[] rows = {"A", "B", "C", "D", "E"};
+                for (String r : rows) {
+                    for (int c = 1; c <= 4; c++) {
+                        psKursi.setInt(1, newStudioId);
+                        psKursi.setString(2, r + c);
+                        psKursi.addBatch();
+                    }
+                }
+                psKursi.executeBatch();
+            }
+
+            conn.commit();
+            JOptionPane.showMessageDialog(this, "Studio \"" + nama + "\" dan 20 kursi standar (A1-E4) berhasil dibuat!",
+                    "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            loadDataStudio();
+
+        } catch (SQLIntegrityConstraintViolationException ex) {
+            JOptionPane.showMessageDialog(this, "Studio \"" + nama + "\" sudah ada di database!", "Duplikat", JOptionPane.WARNING_MESSAGE);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal menambah studio: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void editStudio() {
+        if (selectedIdStudio == null) return;
+        String nama = txtNamaStudio.getText().trim();
+        if (nama.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama studio tidak boleh kosong!", "Validasi", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("INSERT INTO studio (nama_studio) VALUES (?)")) {
-            stmt.setString(1, namaStudio);
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "Data studio berhasil ditambahkan.");
-            PlaceholderSupport.reset(jTextFieldGENRE);
+             PreparedStatement ps = conn.prepareStatement("UPDATE studio SET nama_studio = ? WHERE id_studio = ?")) {
+            ps.setString(1, nama);
+            ps.setInt(2, selectedIdStudio);
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Studio berhasil diperbarui!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
             loadDataStudio();
         } catch (SQLException ex) {
-            String pesan = "23000".equals(ex.getSQLState())
-                    ? "Nama studio tersebut sudah digunakan." : "Studio gagal ditambahkan.";
-            tampilkanErrorDatabase(pesan, ex);
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal mengedit studio: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void hapusStudio() {
-        int selectedRow = jTableGENRE.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih studio yang ingin dihapus pada tabel terlebih dahulu.");
-            return;
-        }
+        if (selectedIdStudio == null) return;
+        String nama = txtNamaStudio.getText().trim();
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin menghapus studio \"" + nama + "\"?",
+                "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
-        int id = (int) jTableGENRE.getValueAt(selectedRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus studio ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try (Connection conn = Koneksi.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM studio WHERE id_studio = ?")) {
-                stmt.setInt(1, id);
-                stmt.executeUpdate();
-                JOptionPane.showMessageDialog(this, "Data studio berhasil dihapus.");
-                PlaceholderSupport.reset(jTextFieldGENRE);
-                loadDataStudio();
-            } catch (SQLIntegrityConstraintViolationException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Studio tidak dapat dihapus karena masih digunakan jadwal tayang.");
-            } catch (SQLException ex) {
-                tampilkanErrorDatabase("Studio gagal dihapus.", ex);
-            }
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM studio WHERE id_studio = ?")) {
+            ps.setInt(1, selectedIdStudio);
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Studio berhasil dihapus!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            loadDataStudio();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Studio tidak dapat dihapus karena masih digunakan dalam jadwal penayangan film.",
+                    "Gagal Hapus", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new FormTambahStudio().setVisible(true));
-    }
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButtonCARI;
-    private javax.swing.JButton jButtonHAPUS;
-    private javax.swing.JButton jButtonKEMBALI;
-    private javax.swing.JButton jButtonTAMBAH;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTableGENRE;
-    private javax.swing.JTextField jTextFieldCARI;
-    private javax.swing.JTextField jTextFieldGENRE;
-    // End of variables declaration//GEN-END:variables
 }

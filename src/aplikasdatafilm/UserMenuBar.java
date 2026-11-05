@@ -1,64 +1,40 @@
-/*
- * Reusable user menu bar untuk semua tampilan user.
- * Gunakan UserMenuBar.buat(frame, idPengguna) di setiap JFrame user.
- */
 package aplikasdatafilm;
 
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JFrame;
+import java.awt.Color;
+import javax.swing.*;
 
 /**
- * Factory untuk JMenuBar user yang seragam.
- * Dipasang di PilihFilm, BeliTiket, CheckOut, dan StrukFilm.
+ * Reusable Cashier / Staff Menu Bar for Cinema Management.
  */
 public class UserMenuBar {
 
-    private UserMenuBar() {
-        // utility class — tidak di-instantiate
-    }
+    private UserMenuBar() {}
 
-    /**
-     * Membuat dan memasang JMenuBar user ke {@code frame} yang diberikan.
-     *
-     * @param frame       JFrame tujuan tempat menu bar dipasang
-     * @param idPengguna  ID pengguna yang sedang login (diteruskan ke form berikutnya)
-     */
     public static void buat(JFrame frame, long idPengguna) {
         JMenuBar menuBar = new JMenuBar();
+        menuBar.setBackground(CinemaTheme.PANEL_BG);
+        menuBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, CinemaTheme.CARD_BORDER));
 
-        // ── Menu User ────────────────────────────────────────────────
-        JMenu menuUser = new JMenu("User");
+        JMenu menuNav = new JMenu("Kasir");
+        menuNav.setFont(CinemaTheme.FONT_BODY_BOLD);
+        menuNav.setForeground(CinemaTheme.CREME);
+
+        JMenuItem itemLoket = new JMenuItem("🎟 Loket Penjualan Tiket");
+        itemLoket.addActionListener(e -> {
+            frame.dispose();
+            new PilihFilm(idPengguna).setVisible(true);
+        });
+        menuNav.add(itemLoket);
 
         JMenuItem itemLogOut = new JMenuItem("Log Out");
-        itemLogOut.setBackground(new java.awt.Color(102, 0, 51));
-        itemLogOut.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
-        itemLogOut.setForeground(new java.awt.Color(153, 0, 51));
+        itemLogOut.setForeground(new Color(0xE5, 0x73, 0x73));
         itemLogOut.addActionListener(e -> {
             frame.dispose();
             new Login().setVisible(true);
         });
-        menuUser.add(itemLogOut);
+        menuNav.add(itemLogOut);
 
-        JMenuItem itemKeluar = new JMenuItem("Keluar");
-        itemKeluar.addActionListener(e -> System.exit(0));
-        menuUser.add(itemKeluar);
-
-        menuBar.add(menuUser);
-
-        // ── Menu Action ──────────────────────────────────────────────
-        JMenu menuAction = new JMenu("Action");
-
-        JMenuItem itemPilihFilm = new JMenuItem("Check Film");
-        itemPilihFilm.addActionListener(e -> {
-            frame.dispose();
-            new PilihFilm(idPengguna).setVisible(true);
-        });
-        menuAction.add(itemPilihFilm);
-
-        menuBar.add(menuAction);
-
+        menuBar.add(menuNav);
         frame.setJMenuBar(menuBar);
     }
 }

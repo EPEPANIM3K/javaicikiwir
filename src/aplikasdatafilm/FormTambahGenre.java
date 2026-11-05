@@ -1,419 +1,306 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package aplikasdatafilm;
 
 import Koneksi.Koneksi;
-import java.awt.Color;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import javax.swing.BorderFactory;
-import javax.swing.JOptionPane;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.plaf.basic.BasicButtonUI;
-import javax.swing.plaf.basic.BasicTableHeaderUI;
+import java.awt.*;
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-/**
- *
- * @author WINDOWS 11
- */
-public class FormTambahGenre extends javax.swing.JFrame {
-    
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FormTambahGenre.class.getName());
-    private static final Color BURGUNDY = new Color(0x6D1F2B);
-    private static final Color CREME = new Color(0xF5EDE5);
-    private static final Color DEEP_CHARCOAL = new Color(0x171416);
 
-    /**
-     * Creates new form FormTambahGenre
-     */
+/**
+ * Modern Genre Management Screen (1280x720).
+ * Standardized layout, clear typography, validation, and table search.
+ */
+public class FormTambahGenre extends JFrame {
+
+    private JTextField txtNamaGenre;
+    private JTextField txtSearch;
+    private JTable tableGenre;
+    private Integer selectedIdGenre = null;
+
+    private JButton btnTambah;
+    private JButton btnEdit;
+    private JButton btnHapus;
+    private JButton btnClear;
+
     public FormTambahGenre() {
-        initComponents();
-        PlaceholderSupport.install(jTextFieldCARI, "Cari nama genre");
-        PlaceholderSupport.install(jTextFieldGENRE, "Masukkan nama genre");
+        CinemaTheme.standardizeFrame(this, "TIKET KU — Manajemen Genre Film");
+        buildUI();
         loadDataGenre();
-        jButtonCARI.addActionListener(e -> cariDataGenre());
-        jButtonTAMBAH.addActionListener(e -> tambahGenre());
-        jButtonHAPUS.addActionListener(e -> hapusGenre());
-        jButtonKEMBALI.addActionListener(e -> {
+    }
+
+    private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(CinemaTheme.BG_DARK);
+
+        // Header
+        JPanel header = CinemaTheme.createStaffHeader(this, "Manajemen Genre Film", "ADMINISTRATOR", () -> {
+            dispose();
+            new Login().setVisible(true);
+        });
+        root.add(header, BorderLayout.NORTH);
+
+        // Main Content (2-Column Grid)
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setOpaque(false);
+        content.setBorder(new EmptyBorder(20, 36, 20, 36));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // ── LEFT: FORM INPUT CARD ───────────────────────────────────────────
+        gbc.gridx = 0;
+        gbc.weightx = 0.40;
+        gbc.insets = new Insets(0, 0, 0, 20);
+
+        JPanel formCard = CinemaTheme.createCard();
+        formCard.setLayout(new BoxLayout(formCard, BoxLayout.Y_AXIS));
+
+        JLabel lblSec = new JLabel("TAMBAH / EDIT GENRE");
+        lblSec.setFont(CinemaTheme.FONT_SUBTITLE);
+        lblSec.setForeground(CinemaTheme.CREME);
+        formCard.add(lblSec);
+
+        JLabel lblSecSub = new JLabel("Kelola nama kategori genre untuk katalog film bioskop.");
+        lblSecSub.setFont(CinemaTheme.FONT_SMALL);
+        lblSecSub.setForeground(CinemaTheme.TEXT_MUTED);
+        formCard.add(lblSecSub);
+
+        formCard.add(Box.createVerticalStrut(24));
+
+        JLabel lblNama = new JLabel("Nama Genre:");
+        lblNama.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblNama.setForeground(CinemaTheme.CREME);
+        formCard.add(lblNama);
+
+        formCard.add(Box.createVerticalStrut(6));
+
+        txtNamaGenre = new JTextField();
+        CinemaTheme.styleTextField(txtNamaGenre);
+        txtNamaGenre.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        txtNamaGenre.setPreferredSize(new Dimension(300, 40));
+        txtNamaGenre.addActionListener(e -> {
+            if (selectedIdGenre == null) tambahGenre(); else editGenre();
+        });
+        formCard.add(txtNamaGenre);
+
+        formCard.add(Box.createVerticalStrut(24));
+
+        // Buttons
+        JPanel btnGrid = new JPanel(new GridLayout(2, 2, 10, 10));
+        btnGrid.setOpaque(false);
+        btnGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+
+        btnTambah = CinemaTheme.createSuccessButton("+ Tambah");
+        btnTambah.addActionListener(e -> tambahGenre());
+
+        btnEdit = CinemaTheme.createPrimaryButton("Simpan Edit");
+        btnEdit.addActionListener(e -> editGenre());
+
+        btnHapus = CinemaTheme.createDangerButton("Hapus");
+        btnHapus.addActionListener(e -> hapusGenre());
+
+        btnClear = CinemaTheme.createSecondaryButton("Reset Form");
+        btnClear.addActionListener(e -> clearForm());
+
+        btnGrid.add(btnTambah);
+        btnGrid.add(btnEdit);
+        btnGrid.add(btnHapus);
+        btnGrid.add(btnClear);
+        formCard.add(btnGrid);
+
+        formCard.add(Box.createVerticalGlue());
+
+        // Back to Film Admin
+        JButton btnBack = CinemaTheme.createSecondaryButton("← Kembali ke Manajemen Film");
+        btnBack.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnBack.addActionListener(e -> {
             dispose();
             new FormFilmAdmin().setVisible(true);
         });
-        jTableGENRE.getSelectionModel().addListSelectionListener(event -> {
-            if (!event.getValueIsAdjusting() && jTableGENRE.getSelectedRow() != -1) {
-                int row = jTableGENRE.getSelectedRow();
-                PlaceholderSupport.setText(jTextFieldGENRE, jTableGENRE.getValueAt(row, 1).toString());
+        formCard.add(btnBack);
+
+        content.add(formCard, gbc);
+
+        // ── RIGHT: TABLE CARD ──────────────────────────────────────────────
+        gbc.gridx = 1;
+        gbc.weightx = 0.60;
+        gbc.insets = new Insets(0, 0, 0, 0);
+
+        JPanel tableCard = CinemaTheme.createCard();
+        tableCard.setLayout(new BorderLayout(0, 12));
+
+        // Search Bar
+        JPanel searchBar = new JPanel(new BorderLayout(10, 0));
+        searchBar.setOpaque(false);
+
+        JLabel lblCari = new JLabel("🔍 Cari Genre:");
+        lblCari.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblCari.setForeground(CinemaTheme.CREME);
+        searchBar.add(lblCari, BorderLayout.WEST);
+
+        txtSearch = new JTextField();
+        CinemaTheme.styleTextField(txtSearch);
+        txtSearch.addActionListener(e -> cariDataGenre());
+        searchBar.add(txtSearch, BorderLayout.CENTER);
+
+        JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        searchActions.setOpaque(false);
+        JButton btnCari = CinemaTheme.createPrimaryButton("Cari");
+        btnCari.addActionListener(e -> cariDataGenre());
+        JButton btnAll = CinemaTheme.createSecondaryButton("Semua");
+        btnAll.addActionListener(e -> {
+            txtSearch.setText("");
+            loadDataGenre();
+        });
+        searchActions.add(btnCari);
+        searchActions.add(btnAll);
+        searchBar.add(searchActions, BorderLayout.EAST);
+
+        tableCard.add(searchBar, BorderLayout.NORTH);
+
+        // Table
+        tableGenre = new JTable();
+        CinemaTheme.styleTable(tableGenre);
+        tableGenre.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tableGenre.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && tableGenre.getSelectedRow() != -1) {
+                int row = tableGenre.getSelectedRow();
+                selectedIdGenre = (Integer) tableGenre.getValueAt(row, 0);
+                txtNamaGenre.setText(String.valueOf(tableGenre.getValueAt(row, 1)));
+                updateBtnState(true);
             }
         });
+
+        JScrollPane scroll = new JScrollPane(tableGenre);
+        scroll.setBorder(BorderFactory.createLineBorder(CinemaTheme.CARD_BORDER, 1));
+        scroll.getViewport().setBackground(CinemaTheme.CARD_BG);
+        tableCard.add(scroll, BorderLayout.CENTER);
+
+        content.add(tableCard, gbc);
+        root.add(content, BorderLayout.CENTER);
+
         AdminMenuBar.buat(this);
-        applyTheme();
+        getContentPane().add(root);
+        updateBtnState(false);
     }
 
-    private void applyTheme() {
-        getContentPane().setBackground(DEEP_CHARCOAL);
-        jPanel1.setBackground(DEEP_CHARCOAL);
-
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
-            jLabel1, jLabel2, jLabel3
-        }) {
-            label.setForeground(CREME);
-        }
-
-        for (javax.swing.JTextField field : new javax.swing.JTextField[]{
-            jTextFieldCARI, jTextFieldGENRE
-        }) {
-            field.setBackground(CREME);
-            field.setForeground(DEEP_CHARCOAL);
-            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-        }
-
-        for (javax.swing.JButton button : new javax.swing.JButton[]{
-            jButtonTAMBAH, jButtonCARI, jButtonHAPUS, jButtonKEMBALI
-        }) {
-            button.setUI(new BasicButtonUI());
-            button.setBackground(BURGUNDY);
-            button.setForeground(CREME);
-            button.setOpaque(true);
-            button.setContentAreaFilled(true);
-            button.setBorderPainted(true);
-            button.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-            button.setFocusPainted(false);
-            button.setRolloverEnabled(false);
-            button.setEnabled(true);
-        }
-
-        // Atur ukuran tombol
-        ButtonSizingHelper.setSizeForButton(jButtonCARI, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButtonTAMBAH, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButtonHAPUS, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButtonKEMBALI, ButtonSizingHelper.TYPE_ACTION);
-
-        jTableGENRE.setBackground(CREME);
-        jTableGENRE.setForeground(DEEP_CHARCOAL);
-        javax.swing.table.JTableHeader tableHeader = jTableGENRE.getTableHeader();
-        tableHeader.setUI(new BasicTableHeaderUI());
-        tableHeader.setOpaque(true);
-        tableHeader.setBackground(BURGUNDY);
-        tableHeader.setForeground(CREME);
-        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
-        headerRenderer.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        headerRenderer.setOpaque(true);
-        headerRenderer.setBackground(BURGUNDY);
-        headerRenderer.setForeground(CREME);
-        tableHeader.setDefaultRenderer(headerRenderer);
-        jTableGENRE.setGridColor(BURGUNDY);
-        jScrollPane1.setBackground(DEEP_CHARCOAL);
-        jScrollPane1.getViewport().setBackground(CREME);
+    private void updateBtnState(boolean rowSelected) {
+        btnTambah.setEnabled(!rowSelected);
+        btnEdit.setEnabled(rowSelected);
+        btnHapus.setEnabled(rowSelected);
     }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jTextFieldCARI = new javax.swing.JTextField();
-        jTextFieldGENRE = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
-        jButtonTAMBAH = new javax.swing.JButton();
-        jButtonCARI = new javax.swing.JButton();
-        jButtonHAPUS = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTableGENRE = new javax.swing.JTable();
-        jButtonKEMBALI = new javax.swing.JButton();
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setText("TAMBAH GENRE FILM");
-
-        jLabel3.setText("Tambah Genre Baru     :");
-
-        jTextFieldCARI.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextFieldCARIActionPerformed(evt);
-            }
-        });
-
-        jTextFieldGENRE.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextFieldGENREActionPerformed(evt);
-            }
-        });
-
-        jLabel2.setText("Cari :");
-
-        jButtonTAMBAH.setText("TAMBAH");
-        jButtonTAMBAH.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonTAMBAHActionPerformed(evt);
-            }
-        });
-
-        jButtonCARI.setText("Cari");
-
-        jButtonHAPUS.setText("HAPUS");
-        jButtonHAPUS.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonHAPUSActionPerformed(evt);
-            }
-        });
-
-        jTableGENRE.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null},
-                {null, null},
-                {null, null},
-                {null, null}
-            },
-            new String [] {
-                "ID", "Genre Film"
-            }
-        ));
-        jScrollPane1.setViewportView(jTableGENRE);
-
-        jButtonKEMBALI.setText("KEMBALI");
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addGap(11, 11, 11)
-                                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(6, 6, 6)
-                                    .addComponent(jTextFieldGENRE))
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                    .addGap(0, 0, Short.MAX_VALUE)
-                                    .addComponent(jButtonTAMBAH)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(jButtonHAPUS))
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                    .addComponent(jTextFieldCARI, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(jButtonCARI, javax.swing.GroupLayout.PREFERRED_SIZE, 57, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(0, 7, Short.MAX_VALUE)))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 375, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(jButtonKEMBALI)))
-                .addContainerGap())
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(93, 93, 93))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(35, 35, 35)
-                .addComponent(jLabel1)
-                .addGap(57, 57, 57)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3)
-                    .addComponent(jTextFieldGENRE, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(30, 30, 30)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButtonTAMBAH)
-                    .addComponent(jButtonHAPUS))
-                .addGap(61, 61, 61)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(jTextFieldCARI, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButtonCARI))
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 28, Short.MAX_VALUE)
-                .addComponent(jButtonKEMBALI)
-                .addGap(15, 15, 15))
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-
-        pack();
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void jTextFieldCARIActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldCARIActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextFieldCARIActionPerformed
-
-    private void jTextFieldGENREActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldGENREActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextFieldGENREActionPerformed
-
-    private void jButtonTAMBAHActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonTAMBAHActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButtonTAMBAHActionPerformed
-
-    private void jButtonHAPUSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonHAPUSActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButtonHAPUSActionPerformed
+    private void clearForm() {
+        txtNamaGenre.setText("");
+        selectedIdGenre = null;
+        tableGenre.clearSelection();
+        updateBtnState(false);
+    }
 
     private void loadDataGenre() {
-        DefaultTableModel model = modelGenreKosong();
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre ORDER BY id_genre ASC");
-             ResultSet rs = stmt.executeQuery()) {
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID Genre", "Nama Genre"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
 
+        try (Connection conn = Koneksi.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id_genre, nama_genre FROM genre ORDER BY nama_genre ASC")) {
             while (rs.next()) {
                 model.addRow(new Object[]{rs.getInt("id_genre"), rs.getString("nama_genre")});
             }
-            jTableGENRE.setModel(model);
+            tableGenre.setModel(model);
+            clearForm();
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Data genre gagal dimuat.", ex);
+            ex.printStackTrace();
         }
     }
 
-    private DefaultTableModel modelGenreKosong() {
-        return new DefaultTableModel(new String[]{"ID", "Genre Film"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-    }
-
-    private void tampilkanErrorDatabase(String pesan, SQLException exception) {
-        logger.log(java.util.logging.Level.SEVERE, pesan, exception);
-        JOptionPane.showMessageDialog(this, pesan + " Periksa koneksi database.",
-                "Kesalahan database", JOptionPane.ERROR_MESSAGE);
-    }
-
     private void cariDataGenre() {
-        String keyword = PlaceholderSupport.getText(jTextFieldCARI).trim();
-        DefaultTableModel model = modelGenreKosong();
-        try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre WHERE nama_genre LIKE ? ORDER BY id_genre ASC")) {
+        String keyword = txtSearch.getText().trim();
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID Genre", "Nama Genre"}, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
 
-            stmt.setString(1, "%" + keyword + "%");
-            try (ResultSet rs = stmt.executeQuery()) {
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id_genre, nama_genre FROM genre WHERE nama_genre LIKE ? ORDER BY nama_genre ASC")) {
+            ps.setString(1, "%" + keyword + "%");
+            try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     model.addRow(new Object[]{rs.getInt("id_genre"), rs.getString("nama_genre")});
                 }
             }
-            jTableGENRE.setModel(model);
+            tableGenre.setModel(model);
         } catch (SQLException ex) {
-            tampilkanErrorDatabase("Pencarian genre gagal.", ex);
+            ex.printStackTrace();
         }
     }
 
     private void tambahGenre() {
-        String namaGenre = PlaceholderSupport.getText(jTextFieldGENRE).trim();
-        if (namaGenre.isEmpty() || namaGenre.length() > 80) {
-            JOptionPane.showMessageDialog(this, "Nama genre wajib diisi dan maksimal 80 karakter.");
+        String nama = txtNamaGenre.getText().trim();
+        if (nama.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama genre tidak boleh kosong!", "Validasi", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try (Connection conn = Koneksi.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("INSERT INTO genre (nama_genre) VALUES (?)")) {
-            stmt.setString(1, namaGenre);
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "Data genre berhasil ditambahkan");
-            PlaceholderSupport.reset(jTextFieldGENRE);
+             PreparedStatement ps = conn.prepareStatement("INSERT INTO genre (nama_genre) VALUES (?)")) {
+            ps.setString(1, nama);
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Genre \"" + nama + "\" berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            loadDataGenre();
+        } catch (SQLIntegrityConstraintViolationException ex) {
+            JOptionPane.showMessageDialog(this, "Genre \"" + nama + "\" sudah ada di database!", "Duplikat", JOptionPane.WARNING_MESSAGE);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal menambah genre: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void editGenre() {
+        if (selectedIdGenre == null) return;
+        String nama = txtNamaGenre.getText().trim();
+        if (nama.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama genre tidak boleh kosong!", "Validasi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE genre SET nama_genre = ? WHERE id_genre = ?")) {
+            ps.setString(1, nama);
+            ps.setInt(2, selectedIdGenre);
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Genre berhasil diperbarui!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
             loadDataGenre();
         } catch (SQLException ex) {
-            String pesan = "23000".equals(ex.getSQLState())
-                    ? "Genre tersebut sudah terdaftar." : "Genre gagal ditambahkan.";
-            tampilkanErrorDatabase(pesan, ex);
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal mengedit genre: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void hapusGenre() {
-        int selectedRow = jTableGENRE.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih genre yang ingin dihapus pada tabel terlebih dahulu");
-            return;
-        }
+        if (selectedIdGenre == null) return;
+        String nama = txtNamaGenre.getText().trim();
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin menghapus genre \"" + nama + "\"?",
+                "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
-        int id = (int) jTableGENRE.getValueAt(selectedRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "Apakah Anda yakin ingin menghapus genre ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try (Connection conn = Koneksi.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM genre WHERE id_genre = ?")) {
-                stmt.setInt(1, id);
-                stmt.executeUpdate();
-                JOptionPane.showMessageDialog(this, "Data genre berhasil dihapus");
-                jTextFieldGENRE.setText("");
-                loadDataGenre();
-            } catch (SQLIntegrityConstraintViolationException ex) {
-                JOptionPane.showMessageDialog(this, "Gagal menghapus genre karena masih digunakan oleh data film.");
-            } catch (SQLException ex) {
-                tampilkanErrorDatabase("Genre gagal dihapus.", ex);
-            }
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM genre WHERE id_genre = ?")) {
+            ps.setInt(1, selectedIdGenre);
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Genre berhasil dihapus!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            loadDataGenre();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Genre tidak dapat dihapus karena masih digunakan oleh film yang ada di katalog.",
+                    "Gagal Hapus", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new FormTambahGenre().setVisible(true));
-    }
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButtonCARI;
-    private javax.swing.JButton jButtonHAPUS;
-    private javax.swing.JButton jButtonKEMBALI;
-    private javax.swing.JButton jButtonTAMBAH;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTableGENRE;
-    private javax.swing.JTextField jTextFieldCARI;
-    private javax.swing.JTextField jTextFieldGENRE;
-    // End of variables declaration//GEN-END:variables
 }

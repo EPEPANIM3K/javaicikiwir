@@ -1,199 +1,133 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package aplikasdatafilm;
-import java.awt.Color;
+
+import java.awt.*;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.Arrays;
-import javax.swing.BorderFactory;
-import javax.swing.JOptionPane;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 /**
- *
- * @author ASUS
+ * Modern Cinema Staff Login Portal (1280x720).
+ * Centered login card, elegant typography, role-aware navigation (Admin vs Cashier).
  */
-public class Login extends javax.swing.JFrame {
+public class Login extends JFrame {
 
-    private static final Color BURGUNDY = new Color(0x6D1F2B);
-    private static final Color CREME = new Color(0xF5EDE5);
-    private static final Color DEEP_CHARCOAL = new Color(0x171416);
+    private JTextField txtEmail;
+    private JPasswordField txtPassword;
 
-    /**
-     * Creates new form Login
-     */
     public Login() {
-        initComponents();
-        applyTheme();
-        PlaceholderSupport.install(jTextField1, "Masukkan email");
-        PlaceholderSupport.install(jPasswordField1, "Masukkan password");
-        jLabel5.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        jLabel5.addMouseListener(new java.awt.event.MouseAdapter() {
+        CinemaTheme.standardizeFrame(this, "TIKET KU — Cinema Staff & Management Login");
+        buildUI();
+    }
+
+    private void buildUI() {
+        JPanel root = new JPanel(new GridBagLayout());
+        root.setBackground(CinemaTheme.BG_DARK);
+
+        // Center Login Card (width 440)
+        JPanel card = CinemaTheme.createCard();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setPreferredSize(new Dimension(460, 520));
+        card.setMaximumSize(new Dimension(460, 520));
+        card.setBorder(new EmptyBorder(32, 40, 32, 40));
+
+        // Cinema Logo & Heading
+        JLabel lblIcon = new JLabel("🎬", SwingConstants.CENTER);
+        lblIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 46));
+        lblIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(lblIcon);
+
+        card.add(Box.createVerticalStrut(8));
+
+        JLabel lblTitle = new JLabel("TIKET KU PREMIERE", SwingConstants.CENTER);
+        lblTitle.setFont(CinemaTheme.FONT_TITLE_LARGE);
+        lblTitle.setForeground(CinemaTheme.CREME);
+        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(lblTitle);
+
+        JLabel lblSub = new JLabel("Cinema Management & Ticketing Portal", SwingConstants.CENTER);
+        lblSub.setFont(CinemaTheme.FONT_SMALL);
+        lblSub.setForeground(CinemaTheme.TEXT_MUTED);
+        lblSub.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(lblSub);
+
+        card.add(Box.createVerticalStrut(28));
+
+        // Email / Username Input
+        JLabel lblEmail = new JLabel("Email / Username Staff:");
+        lblEmail.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblEmail.setForeground(CinemaTheme.CREME);
+        lblEmail.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(lblEmail);
+
+        card.add(Box.createVerticalStrut(6));
+
+        txtEmail = new JTextField();
+        CinemaTheme.styleTextField(txtEmail);
+        txtEmail.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        txtEmail.setPreferredSize(new Dimension(380, 40));
+        txtEmail.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(txtEmail);
+
+        card.add(Box.createVerticalStrut(16));
+
+        // Password Input
+        JLabel lblPassword = new JLabel("Password:");
+        lblPassword.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblPassword.setForeground(CinemaTheme.CREME);
+        lblPassword.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(lblPassword);
+
+        card.add(Box.createVerticalStrut(6));
+
+        txtPassword = new JPasswordField();
+        CinemaTheme.styleTextField(txtPassword);
+        txtPassword.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        txtPassword.setPreferredSize(new Dimension(380, 40));
+        txtPassword.setAlignmentX(Component.LEFT_ALIGNMENT);
+        txtPassword.addActionListener(e -> login());
+        card.add(txtPassword);
+
+        card.add(Box.createVerticalStrut(24));
+
+        // Login Button
+        JButton btnLogin = CinemaTheme.createPrimaryButton("MASUK KE SISTEM BIOSKOP");
+        btnLogin.setFont(CinemaTheme.FONT_SUBTITLE);
+        btnLogin.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        btnLogin.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnLogin.addActionListener(e -> login());
+        card.add(btnLogin);
+
+        card.add(Box.createVerticalStrut(18));
+
+        // Register Link
+        JLabel lblRegister = new JLabel("Belum punya akun staff? Register Staff Baru", SwingConstants.CENTER);
+        lblRegister.setFont(CinemaTheme.FONT_BODY);
+        lblRegister.setForeground(CinemaTheme.ACCENT_GOLD);
+        lblRegister.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lblRegister.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblRegister.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
-            public void mouseClicked(java.awt.event.MouseEvent event) {
+            public void mouseClicked(java.awt.event.MouseEvent e) {
                 dispose();
                 new Register().setVisible(true);
             }
         });
-        setupCenterLayout();
-    }
+        card.add(lblRegister);
 
-    private void setupCenterLayout() {
-        // Center align title components, left align labels and input fields
-        jLabel1.setAlignmentX(java.awt.Component.CENTER_ALIGNMENT);
-        jLabel2.setAlignmentX(java.awt.Component.CENTER_ALIGNMENT);
-        jLabel3.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
-        jTextField1.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
-        jLabel4.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
-        jPasswordField1.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
-        JBuutton.setAlignmentX(java.awt.Component.CENTER_ALIGNMENT);
-        jLabel5.setAlignmentX(java.awt.Component.CENTER_ALIGNMENT);
-    }
-
-    private void applyTheme() {
-        getContentPane().setBackground(DEEP_CHARCOAL);
-        jPanel1.setBackground(DEEP_CHARCOAL);
-
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
-            jLabel1, jLabel2, jLabel3, jLabel4, jLabel5
-        }) {
-            label.setForeground(CREME);
-        }
-
-        jTextField1.setBackground(CREME);
-        jTextField1.setForeground(DEEP_CHARCOAL);
-        jTextField1.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-
-        jPasswordField1.setBackground(CREME);
-        jPasswordField1.setForeground(DEEP_CHARCOAL);
-        jPasswordField1.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-
-        JBuutton.setUI(new javax.swing.plaf.basic.BasicButtonUI());
-        JBuutton.setBackground(BURGUNDY);
-        JBuutton.setForeground(CREME);
-        JBuutton.setOpaque(true);
-        JBuutton.setContentAreaFilled(true);
-        JBuutton.setBorderPainted(true);
-        JBuutton.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-        JBuutton.setFocusPainted(false);
-        JBuutton.setRolloverEnabled(false);
-        ButtonSizingHelper.setSizeForButton(JBuutton, ButtonSizingHelper.TYPE_PRIMARY);
-    }
-
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jLabel4 = new javax.swing.JLabel();
-        jPasswordField1 = new javax.swing.JPasswordField();
-        JBuutton = new javax.swing.JButton();
-        jLabel5 = new javax.swing.JLabel();
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setText(" TIKET KU");
-
-        jLabel2.setText(" LOGIN");
-
-        jLabel3.setText("Email:");
-
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
-            }
-        });
-
-        jLabel4.setText("Password :");
-
-        JBuutton.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        JBuutton.setText("LOGIN");
-        JBuutton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                JBuuttonActionPerformed(evt);
-            }
-        });
-        jLabel5.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jLabel5.setText("Belum punya akun? Register");
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
-            .addComponent(jLabel1)
-            .addComponent(jLabel2)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(100, 100, 100)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel3)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel4)
-                    .addComponent(jPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(100, 100, 100))
-            .addComponent(JBuutton)
-            .addComponent(jLabel5)
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(42, 42, 42)
-                .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel2)
-                .addGap(68, 68, 68)
-                .addComponent(jLabel3)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel4)
-                .addGap(18, 18, 18)
-                .addComponent(jPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(60, 60, 60)
-                .addComponent(JBuutton)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel5)
-                .addGap(71, 71, 71))
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
-            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 450, javax.swing.GroupLayout.PREFERRED_SIZE)
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-
-        pack();
-        setLocationRelativeTo(null);
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
-
-    private void JBuuttonActionPerformed(java.awt.event.ActionEvent evt) {
-        login();
+        root.add(card);
+        getContentPane().add(root);
     }
 
     private void login() {
-        String identity = PlaceholderSupport.getText(jTextField1).trim();
-        char[] password = PlaceholderSupport.getPassword(jPasswordField1);
+        String identity = txtEmail.getText().trim();
+        char[] password = txtPassword.getPassword();
 
         if (identity.isEmpty() || password.length == 0) {
-            JOptionPane.showMessageDialog(this, "Username/email dan password wajib diisi.");
+            JOptionPane.showMessageDialog(this,
+                    "Username/email dan password wajib diisi.",
+                    "Peringatan Login", JOptionPane.WARNING_MESSAGE);
             Arrays.fill(password, '\0');
             return;
         }
@@ -201,69 +135,28 @@ public class Login extends javax.swing.JFrame {
         try {
             LoginService.AuthenticatedUser user = LoginService.authenticateUser(identity, password);
             if (user.role() == LoginService.Role.INVALID) {
-                JOptionPane.showMessageDialog(this, "Username/email atau password salah.");
+                JOptionPane.showMessageDialog(this,
+                        "Username/email atau password salah.",
+                        "Gagal Masuk", JOptionPane.ERROR_MESSAGE);
             } else {
                 dispose();
                 if (user.role() == LoginService.Role.ADMIN) {
-                    new aplikasdatafilm.Menu().setVisible(true);
+                    new Menu().setVisible(true);
                 } else {
                     new PilihFilm(user.idPengguna()).setVisible(true);
                 }
             }
         } catch (NoSuchAlgorithmException ex) {
-            JOptionPane.showMessageDialog(this, "Algoritma SHA-256 tidak tersedia.");
+            JOptionPane.showMessageDialog(this, "Algoritma keamanan SHA-256 tidak tersedia.");
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Gagal memeriksa login: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Gagal koneksi database: " + ex.getMessage());
         } finally {
             Arrays.fill(password, '\0');
-            PlaceholderSupport.reset(jPasswordField1);
+            txtPassword.setText("");
         }
     }
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Login().setVisible(true);
-            }
-        });
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new Login().setVisible(true));
     }
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton JBuutton;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JPasswordField jPasswordField1;
-    private javax.swing.JTextField jTextField1;
-    // End of variables declaration//GEN-END:variables
 }

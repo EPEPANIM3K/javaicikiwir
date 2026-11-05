@@ -3,16 +3,10 @@ package aplikasdatafilm;
 import Koneksi.Koneksi;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public final class PemesananService {
 
@@ -29,8 +23,11 @@ public final class PemesananService {
             LocalDateTime mulaiTayang, String namaStudio, String kodeKursi, int jumlah,
             BigDecimal hargaTiket, BigDecimal subtotal) {
         public BigDecimal total() {
-            return subtotal.add(biayaLayanan);
+            return subtotal.add(biayaLayanan != null ? biayaLayanan : BigDecimal.ZERO);
         }
+    }
+
+    public record DashboardStats(int totalFilm, int totalJadwalHariIni, int totalTiketHariIni, BigDecimal totalPendapatanHariIni) {
     }
 
     private PemesananService() {
@@ -46,7 +43,7 @@ public final class PemesananService {
                 + "WHERE j.mulai_tayang >= CURRENT_TIMESTAMP "
                 + "AND (f.judul LIKE ? OR g.nama_genre LIKE ?) "
                 + "ORDER BY j.mulai_tayang, f.judul";
-        String pattern = "%" + kataKunci.trim() + "%";
+        String pattern = "%" + (kataKunci == null ? "" : kataKunci.trim()) + "%";
         List<Jadwal> jadwal = new ArrayList<>();
         try (Connection connection = Koneksi.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -102,7 +99,11 @@ public final class PemesananService {
         return kursi;
     }
 
-    public static long buatPemesanan(long idPengguna, long idJadwal, List<Integer> idKursi,
+    /**
+     * Memproses konfirmasi pembayaran dan mencatat tiket di database.
+     * Tiket hanya dibuat setelah konfirmasi pembayaran berhasil (status = 'LUNAS').
+     */
+    public static long konfirmasiPembayaranDanBuatTiket(long idPengguna, long idJadwal, List<Integer> idKursi,
             String metodePembayaran) throws SQLException {
         if (idPengguna <= 0 || idJadwal <= 0 || idKursi == null || idKursi.isEmpty()) {
             throw new SQLException("Data pemesanan belum lengkap.");
@@ -131,7 +132,7 @@ public final class PemesananService {
                     }
                 }
 
-                String placeholders = String.join(", ", java.util.Collections.nCopies(kursiDipilih.size(), "?"));
+                String placeholders = String.join(", ", Collections.nCopies(kursiDipilih.size(), "?"));
                 String seatSql = "SELECT k.id_kursi, t.id_tiket FROM jadwal_tayang j "
                         + "JOIN kursi k ON k.id_studio = j.id_studio "
                         + "LEFT JOIN tiket t ON t.id_jadwal = j.id_jadwal AND t.id_kursi = k.id_kursi "
@@ -147,7 +148,7 @@ public final class PemesananService {
                         while (result.next()) {
                             validIds.add(result.getInt("id_kursi"));
                             if (result.getObject("id_tiket") != null) {
-                                throw new SQLException("Salah satu kursi baru saja dipesan pengguna lain.");
+                                throw new SQLException("Salah satu kursi baru saja dipesan orang lain. Silakan pilih kursi lain.");
                             }
                         }
                     }
@@ -156,13 +157,12 @@ public final class PemesananService {
                     throw new SQLException("Kursi yang dipilih tidak tersedia di studio untuk jadwal ini.");
                 }
 
-                BigDecimal subtotal = hargaTiket.multiply(BigDecimal.valueOf(kursiDipilih.size()));
-                BigDecimal biayaLayanan = subtotal.multiply(new BigDecimal("0.10"))
-                        .setScale(2, RoundingMode.HALF_UP);
+                // Sesuai sistem bioskop, tidak ada biaya layanan tambahan di kasir
+                BigDecimal biayaLayanan = BigDecimal.ZERO;
                 long idPemesanan;
                 String bookingSql = "INSERT INTO pemesanan "
                         + "(id_pengguna, metode_pembayaran, biaya_layanan, status_pembayaran) "
-                        + "VALUES (?, ?, ?, 'PENDING')";
+                        + "VALUES (?, ?, ?, 'LUNAS')";
                 try (PreparedStatement statement = connection.prepareStatement(bookingSql,
                         PreparedStatement.RETURN_GENERATED_KEYS)) {
                     statement.setLong(1, idPengguna);
@@ -189,6 +189,7 @@ public final class PemesananService {
                     }
                     statement.executeBatch();
                 }
+
                 connection.commit();
                 return idPemesanan;
             } catch (SQLException exception) {
@@ -200,6 +201,11 @@ public final class PemesananService {
                 throw exception;
             }
         }
+    }
+
+    public static long buatPemesanan(long idPengguna, long idJadwal, List<Integer> idKursi,
+            String metodePembayaran) throws SQLException {
+        return konfirmasiPembayaranDanBuatTiket(idPengguna, idJadwal, idKursi, metodePembayaran);
     }
 
     public static Struk ambilStruk(long idPemesanan) throws SQLException {
@@ -234,6 +240,79 @@ public final class PemesananService {
                         result.getBigDecimal("subtotal"));
             }
         }
+    }
+
+    /**
+     * Memeriksa apakah ada jadwal yang bertabrakan di studio yang sama dalam rentang durasi film.
+     */
+    public static boolean cekBentrokJadwal(int idStudio, LocalDateTime mulaiBaru, int durasiMenit, Long idJadwalExclude)
+            throws SQLException {
+        LocalDateTime selesaiBaru = mulaiBaru.plusMinutes(durasiMenit + 15); // Tambah 15 menit jeda pembersihan studio
+        String sql = "SELECT j.id_jadwal, f.judul, j.mulai_tayang, f.durasi_menit "
+                + "FROM jadwal_tayang j JOIN film f ON f.id_film = j.id_film "
+                + "WHERE j.id_studio = ? "
+                + (idJadwalExclude != null ? "AND j.id_jadwal != ? " : "");
+
+        try (Connection conn = Koneksi.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idStudio);
+            if (idJadwalExclude != null) {
+                ps.setLong(2, idJadwalExclude);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    LocalDateTime mulaiLain = rs.getTimestamp("mulai_tayang").toLocalDateTime();
+                    int durasiLain = rs.getInt("durasi_menit");
+                    LocalDateTime selesaiLain = mulaiLain.plusMinutes(durasiLain + 15);
+
+                    // Overlap check: (MulaiA < SelesaiB) && (MulaiB < SelesaiA)
+                    if (mulaiBaru.isBefore(selesaiLain) && mulaiLain.isBefore(selesaiBaru)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Mengambil statistik operasional bioskop untuk staff / admin dashboard.
+     */
+    public static DashboardStats getDashboardStats() {
+        int totalFilm = 0;
+        int totalJadwalHariIni = 0;
+        int totalTiketHariIni = 0;
+        BigDecimal totalPendapatanHariIni = BigDecimal.ZERO;
+
+        try (Connection conn = Koneksi.getConnection()) {
+            // Total Film
+            try (Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM film")) {
+                if (rs.next()) totalFilm = rs.getInt(1);
+            }
+
+            // Total Jadwal Hari Ini
+            try (Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM jadwal_tayang WHERE DATE(mulai_tayang) = CURRENT_DATE()")) {
+                if (rs.next()) totalJadwalHariIni = rs.getInt(1);
+            }
+
+            // Total Tiket & Pendapatan Hari Ini
+            String revSql = "SELECT COUNT(t.id_tiket), COALESCE(SUM(t.harga_saat_beli), 0) "
+                    + "FROM pemesanan p JOIN tiket t ON t.id_pemesanan = p.id_pemesanan "
+                    + "WHERE DATE(p.dibuat_pada) = CURRENT_DATE() AND p.status_pembayaran = 'LUNAS'";
+            try (Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery(revSql)) {
+                if (rs.next()) {
+                    totalTiketHariIni = rs.getInt(1);
+                    totalPendapatanHariIni = rs.getBigDecimal(2);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new DashboardStats(totalFilm, totalJadwalHariIni, totalTiketHariIni, totalPendapatanHariIni);
     }
 
     private static Jadwal readJadwal(ResultSet result) throws SQLException {

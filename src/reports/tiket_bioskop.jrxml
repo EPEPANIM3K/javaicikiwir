@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" 
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" 
+              name="tiket_bioskop" 
+              pageWidth="280" pageHeight="460" 
+              columnWidth="256" leftMargin="12" rightMargin="12" 
+              topMargin="12" bottomMargin="12" 
+              uuid="c738d2a4-b049-4181-80a9-f5383501ad45">
+    <property name="ireport.zoom" value="1.5"/>
+    <property name="ireport.x" value="0"/>
+    <property name="ireport.y" value="0"/>
+    
+    <parameter name="id_pemesanan" class="java.lang.Long"/>
+    
+    <queryString>
+        <![CDATA[SELECT 
+            p.id_pemesanan,
+            p.dibuat_pada,
+            p.metode_pembayaran,
+            f.judul,
+            f.tahun,
+            f.durasi_menit,
+            s.nama_studio,
+            j.mulai_tayang,
+            k.kode_kursi,
+            t.id_tiket,
+            t.harga_saat_beli
+        FROM pemesanan p
+        JOIN tiket t ON t.id_pemesanan = p.id_pemesanan
+        JOIN jadwal_tayang j ON j.id_jadwal = t.id_jadwal
+        JOIN film f ON f.id_film = j.id_film
+        JOIN studio s ON s.id_studio = j.id_studio
+        JOIN kursi k ON k.id_kursi = t.id_kursi
+        WHERE p.id_pemesanan = $P{id_pemesanan}
+        ORDER BY k.kode_kursi]]>
+    </queryString>
+    
+    <field name="id_pemesanan" class="java.lang.Long"/>
+    <field name="dibuat_pada" class="java.sql.Timestamp"/>
+    <field name="metode_pembayaran" class="java.lang.String"/>
+    <field name="judul" class="java.lang.String"/>
+    <field name="tahun" class="java.lang.Integer"/>
+    <field name="durasi_menit" class="java.lang.Integer"/>
+    <field name="nama_studio" class="java.lang.String"/>
+    <field name="mulai_tayang" class="java.sql.Timestamp"/>
+    <field name="kode_kursi" class="java.lang.String"/>
+    <field name="id_tiket" class="java.lang.Long"/>
+    <field name="harga_saat_beli" class="java.math.BigDecimal"/>
+
+    <!-- Each ticket row renders one cinema ticket stub on a new page -->
+    <group name="GroupTiket" isStartNewPage="true">
+        <groupExpression><![CDATA[$F{id_tiket}]]></groupExpression>
+        <groupHeader>
+            <band height="430">
+                <!-- Cinema Header Box -->
+                <rectangle radius="6">
+                    <reportElement x="0" y="0" width="256" height="426" backcolor="#FFFFFF" uuid="885f67a2-9388-4674-884b-014f358352e8"/>
+                    <graphicElement>
+                        <pen lineWidth="1.5" lineColor="#6D1F2B"/>
+                    </graphicElement>
+                </rectangle>
+                
+                <!-- Header Banner -->
+                <rectangle radius="4">
+                    <reportElement x="3" y="3" width="250" height="48" backcolor="#6D1F2B" uuid="3d21b712-1f34-4a4b-9e65-27a3c3062be2"/>
+                    <graphicElement>
+                        <pen lineWidth="0.0"/>
+                    </graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="10" y="6" width="236" height="20" forecolor="#FFFFFF" uuid="4526b711-cf0b-4680-bc4a-9ef854298fa2"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="14" isBold="true"/>
+                    </textElement>
+                    <text><![CDATA[TIKET KU CINEMA]]></text>
+                </staticText>
+                <staticText>
+                    <reportElement x="10" y="27" width="236" height="18" forecolor="#F5EDE5" uuid="52fa087a-9db2-4d56-b1e6-42bb53a5e802"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="9" isBold="false" isItalic="true"/>
+                    </textElement>
+                    <text><![CDATA[OFFICIAL CINEMA ENTRY PASS]]></text>
+                </staticText>
+
+                <!-- Movie Title -->
+                <textField isStretchWithOverflow="true">
+                    <reportElement x="12" y="60" width="232" height="34" forecolor="#171416" uuid="4f1f964d-91b4-4e4b-96d5-a3522f778393"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="13" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$F{judul}]]></textFieldExpression>
+                </textField>
+                
+                <!-- Studio & Durasi -->
+                <textField>
+                    <reportElement x="12" y="96" width="116" height="20" forecolor="#6D1F2B" uuid="69a19d5d-c6a6-411a-85d7-18ef5c03c530"/>
+                    <textElement textAlignment="Left" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="10" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["STUDIO: " + $F{nama_studio}]]></textFieldExpression>
+                </textField>
+                <textField>
+                    <reportElement x="130" y="96" width="114" height="20" forecolor="#555555" uuid="5a229cb0-3a32-4117-9104-d7ef5b6d9e01"/>
+                    <textElement textAlignment="Right" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="9" isBold="false"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["Durasi: " + $F{durasi_menit} + " Mnt"]]></textFieldExpression>
+                </textField>
+
+                <!-- Separator Line -->
+                <line>
+                    <reportElement x="12" y="119" width="232" height="1" forecolor="#E0E0E0" uuid="7cfd7237-4bf6-4b8f-bf2a-9e320f269a84"/>
+                    <graphicElement>
+                        <pen lineStyle="Dashed"/>
+                    </graphicElement>
+                </line>
+
+                <!-- Showtime Date & Hour -->
+                <staticText>
+                    <reportElement x="12" y="125" width="60" height="14" forecolor="#777777" uuid="2a59a7f3-e51b-4171-85b4-938b8b39a31a"/>
+                    <textElement>
+                        <font fontName="SansSerif" size="8"/>
+                    </textElement>
+                    <text><![CDATA[TANGGAL]]></text>
+                </staticText>
+                <textField pattern="dd/MM/yyyy">
+                    <reportElement x="12" y="139" width="116" height="18" forecolor="#171416" uuid="45fa5cb9-0d32-4318-9128-4ef8535f2991"/>
+                    <textElement verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="11" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$F{mulai_tayang}]]></textFieldExpression>
+                </textField>
+
+                <staticText>
+                    <reportElement x="140" y="125" width="60" height="14" forecolor="#777777" uuid="7cf442cb-b1b5-4bfa-9cf7-9ca07185df23"/>
+                    <textElement textAlignment="Right">
+                        <font fontName="SansSerif" size="8"/>
+                    </textElement>
+                    <text><![CDATA[JAM TAYANG]]></text>
+                </staticText>
+                <textField pattern="HH:mm">
+                    <reportElement x="130" y="139" width="114" height="18" forecolor="#171416" uuid="55ecbb03-cb8a-40a8-b648-fb2cf9fa4219"/>
+                    <textElement textAlignment="Right" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="12" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$F{mulai_tayang}]]></textFieldExpression>
+                </textField>
+
+                <!-- Prominent Seat Box -->
+                <rectangle radius="6">
+                    <reportElement x="12" y="165" width="232" height="74" backcolor="#F5EDE5" uuid="5387431c-b26a-4933-9fa7-b4d08477bb3a"/>
+                    <graphicElement>
+                        <pen lineWidth="1.0" lineColor="#6D1F2B"/>
+                    </graphicElement>
+                </rectangle>
+                <staticText>
+                    <reportElement x="20" y="170" width="216" height="14" forecolor="#6D1F2B" uuid="fa7d532a-718a-4ab0-b47e-8517c24483b2"/>
+                    <textElement textAlignment="Center">
+                        <font fontName="SansSerif" size="9" isBold="true"/>
+                    </textElement>
+                    <text><![CDATA[NOMOR KURSI / SEAT]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="20" y="184" width="216" height="48" forecolor="#6D1F2B" uuid="ecda821e-fa09-43c2-8fe2-82ab7e1b5f10"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle">
+                        <font fontName="SansSerif" size="36" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$F{kode_kursi}]]></textFieldExpression>
+                </textField>
+
+                <!-- Ticket Code & Price Info -->
+                <staticText>
+                    <reportElement x="14" y="248" width="80" height="14" forecolor="#777777" uuid="09db5297-cf3e-48a3-953e-5f9bbdf74bf2"/>
+                    <textElement>
+                        <font fontName="SansSerif" size="8"/>
+                    </textElement>
+                    <text><![CDATA[KODE TIKET:]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="95" y="248" width="149" height="14" forecolor="#171416" uuid="bf9fa0f5-93fa-4384-a1a7-66a7b1b11b15"/>
+                    <textElement textAlignment="Right">
+                        <font fontName="SansSerif" size="8" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["TKT-" + $F{id_pemesanan} + "-" + $F{id_tiket}]]></textFieldExpression>
+                </textField>
+
+                <staticText>
+                    <reportElement x="14" y="266" width="80" height="14" forecolor="#777777" uuid="2a45d045-e62a-442a-a9e9-74d6bfa3e76a"/>
+                    <textElement>
+                        <font fontName="SansSerif" size="8"/>
+                    </textElement>
+                    <text><![CDATA[HARGA TIKET:]]></text>
+                </staticText>
+                <textField pattern="Rp #,###">
+                    <reportElement x="95" y="266" width="149" height="14" forecolor="#171416" uuid="a7c9339e-4c5c-4235-9614-bca5cf8e235a"/>
+                    <textElement textAlignment="Right">
+                        <font fontName="SansSerif" size="9" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$F{harga_saat_beli}]]></textFieldExpression>
+                </textField>
+
+                <staticText>
+                    <reportElement x="14" y="284" width="80" height="14" forecolor="#777777" uuid="453e18a0-2f63-4716-83cb-1c9f4d1a3b83"/>
+                    <textElement>
+                        <font fontName="SansSerif" size="8"/>
+                    </textElement>
+                    <text><![CDATA[METODE BAYAR:]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="95" y="284" width="149" height="14" forecolor="#171416" uuid="2bcfa531-1e9a-4c91-9123-5e74d1a89c31"/>
+                    <textElement textAlignment="Right">
+                        <font fontName="SansSerif" size="8" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$F{metode_pembayaran}]]></textFieldExpression>
+                </textField>
+
+                <!-- Perforation / Tear line -->
+                <line>
+                    <reportElement x="0" y="315" width="256" height="1" forecolor="#999999" uuid="a5d21469-63a2-4a0b-872f-5768cf38b975"/>
+                    <graphicElement>
+                        <pen lineStyle="Dashed"/>
+                    </graphicElement>
+                </line>
+                <staticText>
+                    <reportElement x="0" y="320" width="256" height="12" forecolor="#888888" uuid="e6d19ef8-16cb-40ae-ba4d-2e76fa56e872"/>
+                    <textElement textAlignment="Center">
+                        <font fontName="SansSerif" size="7" isItalic="true"/>
+                    </textElement>
+                    <text><![CDATA[- - - - - SOBEK / SCAN SAAT MASUK STUDIO - - - - -]]></text>
+                </staticText>
+
+                <!-- Stub Barcode Representation -->
+                <staticText>
+                    <reportElement x="12" y="338" width="232" height="18" forecolor="#171416" uuid="7ab548dc-79b8-410a-bb79-1c4b75a1d7f6"/>
+                    <textElement textAlignment="Center" verticalAlignment="Middle">
+                        <font fontName="Monospaced" size="14" isBold="true"/>
+                    </textElement>
+                    <text><![CDATA[||| | | |||| | ||| || ||| |]]></text>
+                </staticText>
+                <textField>
+                    <reportElement x="12" y="358" width="232" height="14" forecolor="#555555" uuid="e1a2f6dc-5e58-4503-bc8e-28b3bb98d41a"/>
+                    <textElement textAlignment="Center">
+                        <font fontName="Monospaced" size="8"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["* " + $F{id_pemesanan} + "-" + $F{id_tiket} + "-" + $F{kode_kursi} + " *"]]></textFieldExpression>
+                </textField>
+
+                <!-- Rules Footer -->
+                <staticText>
+                    <reportElement x="12" y="380" width="232" height="34" forecolor="#888888" uuid="8a9e9e1c-bfa8-48b8-b1c4-1cae9573f0fa"/>
+                    <textElement textAlignment="Center">
+                        <font fontName="SansSerif" size="7"/>
+                    </textElement>
+                    <text><![CDATA[Tiket yang sudah dibeli tidak dapat dikembalikan.
+Harap memasuki studio 10 menit sebelum film dimulai.
+Selamat Menonton!]]></text>
+                </staticText>
+            </band>
+        </groupHeader>
+    </group>
+</jasperReport>

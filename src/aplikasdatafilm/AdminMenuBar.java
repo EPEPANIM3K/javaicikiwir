@@ -1,77 +1,76 @@
-/*
- * Reusable admin menu bar untuk semua tampilan admin.
- * Gunakan AdminMenuBar.buat(frame) di setiap JFrame admin.
- */
 package aplikasdatafilm;
 
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JFrame;
+import java.awt.Color;
+import java.awt.Font;
+import javax.swing.*;
 
 /**
- * Factory untuk JMenuBar admin yang seragam.
- * Dipasang di FormFilmAdmin, FormTambahGenre, dan FormTambahStudio.
+ * Reusable Admin Menu Bar for Cinema Management.
  */
 public class AdminMenuBar {
 
-    private AdminMenuBar() {
-        // utility class — tidak di-instantiate
-    }
+    private AdminMenuBar() {}
 
-    /**
-     * Membuat dan memasang JMenuBar admin ke {@code frame} yang diberikan.
-     * Menu akan menutup {@code frame} saat berpindah halaman.
-     *
-     * @param frame JFrame tujuan tempat menu bar dipasang
-     */
     public static void buat(JFrame frame) {
         JMenuBar menuBar = new JMenuBar();
+        menuBar.setBackground(CinemaTheme.PANEL_BG);
+        menuBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, CinemaTheme.CARD_BORDER));
 
-        // ── Menu Admin ───────────────────────────────────────────────
-        JMenu menuAdmin = new JMenu("Admin");
+        // ── Menu Navigasi ──────────────────────────────────────────────
+        JMenu menuNav = new JMenu("Navigasi Operasional");
+        menuNav.setFont(CinemaTheme.FONT_BODY_BOLD);
+        menuNav.setForeground(CinemaTheme.CREME);
 
-        JMenuItem itemMenu = new JMenuItem("Menu Utama");
-        itemMenu.addActionListener(e -> {
+        JMenuItem itemDashboard = new JMenuItem("🏠 Dashboard Operasional");
+        itemDashboard.addActionListener(e -> {
             frame.dispose();
             new Menu().setVisible(true);
         });
-        menuAdmin.add(itemMenu);
+        menuNav.add(itemDashboard);
+
+        JMenuItem itemLoket = new JMenuItem("🎟 Loket Penjualan Tiket");
+        itemLoket.addActionListener(e -> {
+            frame.dispose();
+            new PilihFilm(1).setVisible(true);
+        });
+        menuNav.add(itemLoket);
+
+        menuNav.addSeparator();
 
         JMenuItem itemLogOut = new JMenuItem("Log Out");
-        itemLogOut.setBackground(new java.awt.Color(102, 0, 51));
-        itemLogOut.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
-        itemLogOut.setForeground(new java.awt.Color(153, 0, 51));
+        itemLogOut.setForeground(new Color(0xE5, 0x73, 0x73));
         itemLogOut.addActionListener(e -> {
             frame.dispose();
             new Login().setVisible(true);
         });
-        menuAdmin.add(itemLogOut);
+        menuNav.add(itemLogOut);
 
-        JMenuItem itemKeluar = new JMenuItem("Keluar");
+        JMenuItem itemKeluar = new JMenuItem("Tutup Aplikasi");
         itemKeluar.addActionListener(e -> System.exit(0));
-        menuAdmin.add(itemKeluar);
+        menuNav.add(itemKeluar);
 
-        menuBar.add(menuAdmin);
+        menuBar.add(menuNav);
 
-        // ── Menu Data ────────────────────────────────────────────────
-        JMenu menuData = new JMenu("Data");
+        // ── Menu Manajemen Data ───────────────────────────────────────
+        JMenu menuData = new JMenu("Kelola Data Bioskop");
+        menuData.setFont(CinemaTheme.FONT_BODY_BOLD);
+        menuData.setForeground(CinemaTheme.CREME);
 
-        JMenuItem itemDataFilm = new JMenuItem("Isi Data Film");
-        itemDataFilm.addActionListener(e -> {
+        JMenuItem itemFilm = new JMenuItem("🎬 Film & Jadwal Tayang");
+        itemFilm.addActionListener(e -> {
             frame.dispose();
             new FormFilmAdmin().setVisible(true);
         });
-        menuData.add(itemDataFilm);
+        menuData.add(itemFilm);
 
-        JMenuItem itemGenre = new JMenuItem("Tambah Genre");
+        JMenuItem itemGenre = new JMenuItem("🏷 Kategori Genre");
         itemGenre.addActionListener(e -> {
             frame.dispose();
             new FormTambahGenre().setVisible(true);
         });
         menuData.add(itemGenre);
 
-        JMenuItem itemStudio = new JMenuItem("Tambah Studio");
+        JMenuItem itemStudio = new JMenuItem("🏢 Ruang Studio");
         itemStudio.addActionListener(e -> {
             frame.dispose();
             new FormTambahStudio().setVisible(true);

@@ -1,36 +1,35 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package aplikasdatafilm;
-import java.awt.Color;
-import java.awt.Cursor;
+
+import java.awt.*;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import javax.swing.BorderFactory;
-import javax.swing.JOptionPane;
-import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 /**
- *
- * @author ASUS
+ * Modern Cinema Receipt & Ticket Printing Screen (1280x720).
+ * Displays full transaction breakdown, thermal receipt preview,
+ * and one-click actions for Printing Thermal Receipt and Printing Official Cinema Tickets via JasperReports.
  */
-public class StrukFilm extends javax.swing.JFrame {
+public class StrukFilm extends JFrame {
 
-    private static final Color BURGUNDY = new Color(0x6D1F2B);
-    private static final Color CREME = new Color(0xF5EDE5);
-    private static final Color DEEP_CHARCOAL = new Color(0x171416);
+    private final long idPemesanan;
+    private final long idPengguna;
+    private PemesananService.Struk dataStruk;
 
-    private long idPengguna;
-    private long idPemesanan;
-    private final java.text.NumberFormat formatRupiah = java.text.NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
-    private final DateTimeFormatter formatTanggal = DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm", new Locale("id", "ID"));
-    private final DateTimeFormatter formatJam = DateTimeFormatter.ofPattern("HH:mm");
+    private JLabel lblStatusBadge;
+    private JLabel lblNoTransaksi;
+    private JLabel lblWaktuTransaksi;
+    private JLabel lblJudulFilm;
+    private JLabel lblStudio;
+    private JLabel lblJadwalTayang;
+    private JLabel lblKursi;
+    private JLabel lblJumlahTiket;
+    private JLabel lblHargaSatuan;
+    private JLabel lblMetodeBayar;
+    private JLabel lblTotalBayar;
 
-    /**
-     * Creates new form Login
-     */
     public StrukFilm() {
         this(0, 0);
     }
@@ -38,392 +37,237 @@ public class StrukFilm extends javax.swing.JFrame {
     public StrukFilm(long idPemesanan, long idPengguna) {
         this.idPemesanan = idPemesanan;
         this.idPengguna = idPengguna;
-        initComponents();
-        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        for (javax.swing.JTextField field : new javax.swing.JTextField[]{jTextField1, jTextField2,
-                jTextField3, jTextField4, jTextField5, jTextField6, jTextField7, jTextField8,
-                jTextField9, jTextField10}) {
-            field.setEditable(false);
-            field.setBackground(CREME);
-            field.setForeground(DEEP_CHARCOAL);
-            field.setBorder(BorderFactory.createLineBorder(BURGUNDY));
-        }
-        JBuutton.addActionListener(event -> {
+
+        CinemaTheme.standardizeFrame(this, "TIKET KU — Bukti Transaksi & Cetak Tiket");
+        buildUI();
+        muatDataStruk();
+    }
+
+    private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(CinemaTheme.BG_DARK);
+
+        // Header
+        JPanel header = CinemaTheme.createStaffHeader(this, "Struk & Cetak Tiket Bioskop", "KASIR OPERASIONAL", () -> {
+            dispose();
+            new Login().setVisible(true);
+        });
+        root.add(header, BorderLayout.NORTH);
+
+        // Main Content (2 Columns)
+        JPanel content = new JPanel(new GridLayout(1, 2, 28, 0));
+        content.setOpaque(false);
+        content.setBorder(new EmptyBorder(20, 36, 20, 36));
+
+        // ── LEFT COLUMN: RECEIPT CARD (Thermal Receipt Style Preview) ──────
+        JPanel receiptCard = CinemaTheme.createCard();
+        receiptCard.setLayout(new BorderLayout(0, 12));
+
+        // Top receipt banner
+        JPanel receiptHeader = new JPanel();
+        receiptHeader.setLayout(new BoxLayout(receiptHeader, BoxLayout.Y_AXIS));
+        receiptHeader.setOpaque(false);
+
+        JLabel brand = new JLabel("TIKET KU PREMIERE CINEMA", SwingConstants.CENTER);
+        brand.setFont(CinemaTheme.FONT_TITLE);
+        brand.setForeground(CinemaTheme.CREME);
+        brand.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel address = new JLabel("Jl. Bioskop Modern No. 21, Jawa Timur", SwingConstants.CENTER);
+        address.setFont(CinemaTheme.FONT_SMALL);
+        address.setForeground(CinemaTheme.TEXT_MUTED);
+        address.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        receiptHeader.add(brand);
+        receiptHeader.add(Box.createVerticalStrut(2));
+        receiptHeader.add(address);
+        receiptHeader.add(Box.createVerticalStrut(8));
+
+        // Status Badge
+        lblStatusBadge = new JLabel(" STATUS: LUNAS / SELESAI ", SwingConstants.CENTER);
+        lblStatusBadge.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblStatusBadge.setForeground(CinemaTheme.CREME);
+        lblStatusBadge.setBackground(CinemaTheme.SUCCESS);
+        lblStatusBadge.setOpaque(true);
+        lblStatusBadge.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
+        lblStatusBadge.setAlignmentX(Component.CENTER_ALIGNMENT);
+        receiptHeader.add(lblStatusBadge);
+
+        receiptCard.add(receiptHeader, BorderLayout.NORTH);
+
+        // Details Center
+        JPanel receiptBody = new JPanel(new GridLayout(9, 2, 8, 8));
+        receiptBody.setBackground(CinemaTheme.PANEL_BG);
+        receiptBody.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(CinemaTheme.CARD_BORDER, 1),
+                BorderFactory.createEmptyBorder(12, 16, 12, 16)
+        ));
+
+        lblNoTransaksi = addReceiptRow(receiptBody, "No. Transaksi");
+        lblWaktuTransaksi = addReceiptRow(receiptBody, "Waktu Transaksi");
+        lblJudulFilm = addReceiptRow(receiptBody, "Judul Film");
+        lblStudio = addReceiptRow(receiptBody, "Studio");
+        lblJadwalTayang = addReceiptRow(receiptBody, "Jadwal Tayang");
+        lblKursi = addReceiptRow(receiptBody, "Nomor Kursi");
+        lblJumlahTiket = addReceiptRow(receiptBody, "Jumlah Tiket");
+        lblHargaSatuan = addReceiptRow(receiptBody, "Harga per Tiket");
+        lblMetodeBayar = addReceiptRow(receiptBody, "Metode Pembayaran");
+
+        receiptCard.add(receiptBody, BorderLayout.CENTER);
+
+        // Total Bottom
+        JPanel receiptBottom = new JPanel(new BorderLayout());
+        receiptBottom.setBackground(CinemaTheme.CARD_BG);
+        receiptBottom.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(2, 0, 0, 0, CinemaTheme.BURGUNDY),
+                BorderFactory.createEmptyBorder(10, 8, 6, 8)
+        ));
+
+        JLabel lblTotalTag = new JLabel("TOTAL DIBAYAR:");
+        lblTotalTag.setFont(CinemaTheme.FONT_SUBTITLE);
+        lblTotalTag.setForeground(CinemaTheme.CREME);
+
+        lblTotalBayar = new JLabel("Rp 0");
+        lblTotalBayar.setFont(CinemaTheme.FONT_BIG_NUMBER);
+        lblTotalBayar.setForeground(CinemaTheme.ACCENT_GOLD);
+
+        receiptBottom.add(lblTotalTag, BorderLayout.WEST);
+        receiptBottom.add(lblTotalBayar, BorderLayout.EAST);
+        receiptCard.add(receiptBottom, BorderLayout.SOUTH);
+
+        content.add(receiptCard);
+
+        // ── RIGHT COLUMN: PRINT & NAVIGATION ACTIONS ───────────────────────
+        JPanel actionCard = CinemaTheme.createCard();
+        actionCard.setLayout(new BoxLayout(actionCard, BoxLayout.Y_AXIS));
+
+        JLabel actTitle = new JLabel("OPERASIONAL TIKET & STRUK");
+        actTitle.setFont(CinemaTheme.FONT_SUBTITLE);
+        actTitle.setForeground(CinemaTheme.CREME);
+        actionCard.add(actTitle);
+
+        JLabel actSub = new JLabel("Cetak struk belanja kasir atau tiket masuk studio bioskop.");
+        actSub.setFont(CinemaTheme.FONT_SMALL);
+        actSub.setForeground(CinemaTheme.TEXT_MUTED);
+        actionCard.add(actSub);
+
+        actionCard.add(Box.createVerticalStrut(20));
+
+        // Success banner alert
+        JPanel alert = new JPanel(new BorderLayout(10, 0));
+        alert.setBackground(new Color(0x1B, 0x33, 0x20));
+        alert.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(CinemaTheme.SUCCESS, 1),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)
+        ));
+        JLabel alertIcon = new JLabel("✓");
+        alertIcon.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        alertIcon.setForeground(new Color(0x81, 0xC7, 0x84));
+        JLabel alertMsg = new JLabel("<html><b>Transaksi Berhasil Dikonfirmasi!</b><br>"
+                + "<span style='color: #C5B8AF; font-size: 9pt;'>Pembayaran telah tervalidasi dan nomor tiket telah tercatat di sistem bioskop.</span></html>");
+        alertMsg.setForeground(CinemaTheme.CREME);
+        alert.add(alertIcon, BorderLayout.WEST);
+        alert.add(alertMsg, BorderLayout.CENTER);
+        alert.setMaximumSize(new Dimension(Integer.MAX_VALUE, 65));
+        actionCard.add(alert);
+
+        actionCard.add(Box.createVerticalStrut(24));
+
+        // Action Button 1: Cetak Tiket JasperReports
+        JButton btnCetakTiket = CinemaTheme.createPrimaryButton("🎟  Cetak Tiket Bioskop (JasperReports)");
+        btnCetakTiket.setFont(CinemaTheme.FONT_SUBTITLE);
+        btnCetakTiket.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        btnCetakTiket.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnCetakTiket.addActionListener(e -> {
+            JasperTicketService.cetakTiket(idPemesanan);
+        });
+        actionCard.add(btnCetakTiket);
+
+        actionCard.add(Box.createVerticalStrut(14));
+
+        // Action Button 2: Cetak Struk Pembelian
+        JButton btnCetakStruk = CinemaTheme.createSecondaryButton("🖨  Cetak Struk Transaksi Kasir");
+        btnCetakStruk.setFont(CinemaTheme.FONT_SUBTITLE);
+        btnCetakStruk.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        btnCetakStruk.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnCetakStruk.addActionListener(e -> {
+            CetakStruk.cetak(idPemesanan);
+        });
+        actionCard.add(btnCetakStruk);
+
+        actionCard.add(Box.createVerticalStrut(20));
+        JSeparator sep = new JSeparator();
+        sep.setForeground(CinemaTheme.CARD_BORDER);
+        actionCard.add(sep);
+        actionCard.add(Box.createVerticalStrut(20));
+
+        // Action Button 3: Transaksi Baru
+        JButton btnBaru = CinemaTheme.createSuccessButton("+ Transaksi Tiket Baru");
+        btnBaru.setFont(CinemaTheme.FONT_BODY_BOLD);
+        btnBaru.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnBaru.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnBaru.addActionListener(e -> {
             dispose();
             new PilihFilm(idPengguna).setVisible(true);
         });
-        jButton1.addActionListener(event -> cetakStruk());
-        muatStruk();
-//        UserMenuBar.buat(this, idPengguna);
-        applyTheme();
+        actionCard.add(btnBaru);
+
+        actionCard.add(Box.createVerticalStrut(10));
+
+        // Action Button 4: Menu Utama
+        JButton btnMenu = CinemaTheme.createSecondaryButton("🏠 Kembali ke Menu Utama");
+        btnMenu.setFont(CinemaTheme.FONT_BODY_BOLD);
+        btnMenu.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnMenu.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnMenu.addActionListener(e -> {
+            dispose();
+            new Menu().setVisible(true);
+        });
+        actionCard.add(btnMenu);
+
+        actionCard.add(Box.createVerticalGlue());
+        content.add(actionCard);
+
+        root.add(content, BorderLayout.CENTER);
+        getContentPane().add(root);
     }
 
-    private void applyTheme() {
-        getContentPane().setBackground(DEEP_CHARCOAL);
-        jPanel1.setBackground(DEEP_CHARCOAL);
+    private JLabel addReceiptRow(JPanel panel, String label) {
+        JLabel lblK = new JLabel(label + ":");
+        lblK.setFont(CinemaTheme.FONT_SMALL);
+        lblK.setForeground(CinemaTheme.TEXT_MUTED);
 
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
-            jLabel1, jLabel2, jLabel3, jLabel4, jLabel5, jLabel6, jLabel7, jLabel8,
-            jLabel9, jLabel10, jLabel11, jLabel12
-        }) {
-            label.setForeground(CREME);
-        }
+        JLabel lblV = new JLabel("-");
+        lblV.setFont(CinemaTheme.FONT_BODY_BOLD);
+        lblV.setForeground(CinemaTheme.CREME);
 
-        // Apply styling ke tombol menggunakan style dari Menu.java
-        for (javax.swing.JButton button : new javax.swing.JButton[]{JBuutton, jButton1}) {
-            button.setUI(new BasicButtonUI());
-            button.setBackground(BURGUNDY);
-            button.setForeground(CREME);
-            button.setOpaque(true);
-            button.setContentAreaFilled(true);
-            button.setBorderPainted(true);
-            button.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(BURGUNDY.darker()),
-                    BorderFactory.createEmptyBorder(4, 12, 4, 12)));
-            button.setFocusPainted(false);
-            button.setRolloverEnabled(false);
-            button.setEnabled(true);
-            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            button.setFont(new java.awt.Font("Segoe UI", 1, 12));
-        }
-
-        ButtonSizingHelper.setSizeForButton(JBuutton, ButtonSizingHelper.TYPE_ACTION);
-        ButtonSizingHelper.setSizeForButton(jButton1, ButtonSizingHelper.TYPE_ACTION);
+        panel.add(lblK);
+        panel.add(lblV);
+        return lblV;
     }
 
-    private void muatStruk() {
-        if (idPemesanan <= 0) {
-            return;
-        }
+    private void muatDataStruk() {
+        if (idPemesanan <= 0) return;
+
         try {
-            PemesananService.Struk struk = PemesananService.ambilStruk(idPemesanan);
-            jTextField1.setText(struk.judul());
-            jTextField2.setText(Long.toString(struk.idPemesanan()));
-            jTextField3.setText(formatTanggal.format(struk.dibuatPada()));
-            jTextField4.setText(formatTanggal.format(struk.mulaiTayang()));
-            jTextField5.setText(formatJam.format(struk.mulaiTayang()) + " / " + struk.durasiMenit() + " menit");
-            jTextField6.setText(struk.namaStudio());
-            jTextField7.setText(struk.kodeKursi());
-            jTextField8.setText(Integer.toString(struk.jumlah()));
-            jTextField9.setText(formatRupiah.format(struk.hargaTiket()));
-            jTextField10.setText(formatRupiah.format(struk.total()));
-            jLabel2.setText("STRUK PEMBELIAN - " + struk.statusPembayaran());
-        } catch (SQLException exception) {
-            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(
-                    java.util.logging.Level.SEVERE, "Gagal memuat struk", exception);
-            JOptionPane.showMessageDialog(this, "Struk gagal dimuat. Periksa koneksi database.",
-                    "Kesalahan database", JOptionPane.ERROR_MESSAGE);
+            dataStruk = PemesananService.ambilStruk(idPemesanan);
+            lblNoTransaksi.setText("#" + dataStruk.idPemesanan());
+            lblWaktuTransaksi.setText(CinemaTheme.formatTanggalWaktu(dataStruk.dibuatPada()) + " WIB");
+            lblJudulFilm.setText(dataStruk.judul());
+            lblStudio.setText(dataStruk.namaStudio());
+            lblJadwalTayang.setText(CinemaTheme.formatTanggalWaktu(dataStruk.mulaiTayang()) + " WIB");
+            lblKursi.setText(dataStruk.kodeKursi());
+            lblJumlahTiket.setText(dataStruk.jumlah() + " Tiket");
+            lblHargaSatuan.setText(CinemaTheme.formatRupiah(dataStruk.hargaTiket()));
+            lblMetodeBayar.setText(dataStruk.metodePembayaran());
+            lblTotalBayar.setText(CinemaTheme.formatRupiah(dataStruk.total()));
+            lblStatusBadge.setText(" STATUS: " + dataStruk.statusPembayaran() + " ");
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Gagal memuat struk: " + ex.getMessage(),
+                    "Kesalahan Database",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    private void cetakStruk() {
-        if (idPemesanan <= 0) {
-            javax.swing.JOptionPane.showMessageDialog(this,
-                    "Tidak ada data pemesanan yang bisa dicetak.");
-            return;
-        }
-        CetakStruk.cetak(idPemesanan);
-    }
-
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        JBuutton = new javax.swing.JButton();
-        jTextField2 = new javax.swing.JTextField();
-        jLabel6 = new javax.swing.JLabel();
-        jLabel7 = new javax.swing.JLabel();
-        jTextField3 = new javax.swing.JTextField();
-        jLabel8 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
-        jLabel10 = new javax.swing.JLabel();
-        jLabel11 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jTextField4 = new javax.swing.JTextField();
-        jTextField5 = new javax.swing.JTextField();
-        jTextField6 = new javax.swing.JTextField();
-        jTextField7 = new javax.swing.JTextField();
-        jTextField8 = new javax.swing.JTextField();
-        jLabel5 = new javax.swing.JLabel();
-        jLabel12 = new javax.swing.JLabel();
-        jTextField9 = new javax.swing.JTextField();
-        jTextField10 = new javax.swing.JTextField();
-        jButton1 = new javax.swing.JButton();
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setText(" TIKET KU");
-
-        jLabel2.setText("STRUK PEMBELIAN");
-
-        jLabel3.setText("Tanggal :");
-
-        jLabel4.setText("Film:");
-
-        JBuutton.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        JBuutton.setText("KEMBALI");
-        JBuutton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                JBuuttonActionPerformed(evt);
-            }
-        });
-
-        jTextField2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField2ActionPerformed(evt);
-            }
-        });
-
-        jLabel6.setText("Nomor Transaksi :");
-
-        jLabel7.setText("Tanggal :");
-
-        jTextField3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField3ActionPerformed(evt);
-            }
-        });
-
-        jLabel8.setText("Jam :");
-
-        jLabel9.setText("Studio :");
-
-        jLabel10.setText("Kursi :");
-
-        jLabel11.setText("Jumlah :");
-
-        jTextField8.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField8ActionPerformed(evt);
-            }
-        });
-
-        jLabel5.setText("Harga/Tiket :");
-
-        jLabel12.setText("Total :");
-
-        jButton1.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jButton1.setText("PRINT STRUK");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(139, 139, 139)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel2)
-                            .addComponent(jLabel1)))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(18, 18, 18)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel6)
-                                    .addComponent(jLabel3)
-                                    .addComponent(jLabel4)
-                                    .addComponent(jLabel7)
-                                    .addComponent(jLabel8)
-                                    .addComponent(jLabel9)
-                                    .addComponent(jLabel10)
-                                    .addComponent(jLabel11)
-                                    .addComponent(jLabel12)
-                                    .addComponent(JBuutton))
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addGroup(jPanel1Layout.createSequentialGroup()
-                                        .addGap(134, 134, 134)
-                                        .addComponent(jButton1))
-                                    .addGroup(jPanel1Layout.createSequentialGroup()
-                                        .addGap(12, 12, 12)
-                                        .addComponent(jTextField3))
-                                    .addGroup(jPanel1Layout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(jTextField2))))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel5)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jTextField1)
-                                    .addComponent(jTextField4)
-                                    .addComponent(jTextField5)
-                                    .addComponent(jTextField6)
-                                    .addComponent(jTextField7)
-                                    .addComponent(jTextField10)
-                                    .addComponent(jTextField9, javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(jTextField8, javax.swing.GroupLayout.Alignment.TRAILING))))
-                        .addGap(14, 14, 14)))
-                .addContainerGap())
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(42, 42, 42)
-                .addComponent(jLabel1)
-                .addGap(18, 18, 18)
-                .addComponent(jLabel2)
-                .addGap(34, 34, 34)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel6)
-                            .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(18, 18, 18)
-                        .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jLabel3))
-                .addGap(49, 49, 49)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel4)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel7)
-                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel8)
-                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel9)
-                    .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel10)
-                    .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel11)
-                    .addComponent(jTextField8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(54, 54, 54)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel5)
-                    .addComponent(jTextField9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel12)
-                    .addComponent(jTextField10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(71, 71, 71)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(JBuutton)
-                    .addComponent(jButton1))
-                .addContainerGap(70, Short.MAX_VALUE))
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-
-        pack();
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void jTextField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField2ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField2ActionPerformed
-
-    private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField3ActionPerformed
-
-    private void JBuuttonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_JBuuttonActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_JBuuttonActionPerformed
-
-    private void jTextField8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField8ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField8ActionPerformed
-
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(StrukFilm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new StrukFilm().setVisible(true);
-            }
-        });
-    }
-
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton JBuutton;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
-    private javax.swing.JLabel jLabel11;
-    private javax.swing.JLabel jLabel12;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField10;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
-    private javax.swing.JTextField jTextField4;
-    private javax.swing.JTextField jTextField5;
-    private javax.swing.JTextField jTextField6;
-    private javax.swing.JTextField jTextField7;
-    private javax.swing.JTextField jTextField8;
-    private javax.swing.JTextField jTextField9;
-    // End of variables declaration//GEN-END:variables
 }
